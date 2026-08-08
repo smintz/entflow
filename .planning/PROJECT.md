@@ -14,20 +14,25 @@ A multi-step business process declared in the ent schema executes durably — su
 
 ### Validated
 
-(None yet — ship to validate)
+*Validated in Phase 1: Runtime Core (2026-08-08) — CORE-01 through CORE-12, SM-01, META-01, META-02.*
+
+- [x] Flow/step builder API with typed closures declared via `Flows()` in schema files
+- [x] Typed DI registry: `entflow.Provide(registry, client)` at startup, `entflow.Use[T](ctx)` in activity bodies
+- [x] `entflow.Codec[In]` input serialization with a JSON codec in core (no `proto.Message` requirement)
+- [x] `Describe()` printing the flow as data (step, kind, deps, transitions claimed) — doubles as dry-run
+- [x] Flow metadata API exposing flow name, owning entity, `In`/`Out` Go types, and step topology for external consumers
+- [x] Production dependency graph contains `ent` and no transport, protobuf, or descriptor machinery — enforced by an automated import-graph test, not convention (META-02)
+- [x] Activity closures structurally cannot receive `*ent.Tx` — proven by a negative compile fixture, not a runtime check (CORE-04)
 
 ### Active
 
-- [ ] Flow/step builder API with typed closures declared via `Flows()` in schema files
-- [ ] Three step kinds with distinct safety rules: DB steps (receive `*ent.Tx`), Activities (no `*ent.Tx` — external calls), Emits (fire-and-forget outbox)
+- [ ] Three step kinds with distinct safety rules: DB steps (receive `*ent.Tx`), Activities (no `*ent.Tx` — external calls), Emits (fire-and-forget outbox) — *DB and Activity kinds validated in Phase 1; Emit is declarable but the outbox relay lands in Phase 4*
 - [ ] DB step execution where step effect and run progress pointer commit in the same transaction
 - [ ] Run-row persistence: a run entity per flow with state, serialized input, current step, attempt counter, last error, timestamps, lineage edge to the owning aggregate
 - [ ] Worker poller with `FOR UPDATE SKIP LOCKED` claim — the database is the queue, no coordination service
 - [ ] Crash-resume: any interrupted run is resumable by any worker to the same terminal state
 - [ ] Activity three-beat protocol (stamp attempt+key → execute untransacted → persist result) with framework-supplied deterministic idempotency keys (`runID:stepName:attempt`)
 - [ ] Retry policies with backoff on Activities; exhausted retries move the run to `failed:<step>`
-- [ ] Typed DI registry: `entflow.Provide(registry, client)` at startup, `entflow.Use[T](ctx)` in activity bodies
-- [ ] `entflow.Codec[In]` input serialization with a JSON codec in core (no `proto.Message` requirement)
 - [ ] Emit steps writing outbox rows in the anchor step's transaction, plus a relay (poll → claim → deliver → mark) with pluggable targets (NATS JetStream first-class)
 - [ ] Flow chaining: an outbox event can start another flow
 - [ ] Dependency edges (`After`) and conditional guards (`When`, `SelfWas`) validated as a DAG at codegen
@@ -37,10 +42,8 @@ A multi-step business process declared in the ent schema executes durably — su
 - [ ] `DenyStatusEscalation` privacy rule allowing privileged transitions only under a workflow marker only the generated runner sets
 - [ ] Runs are privacy-governed queryable entities (status endpoints, ops dashboards, admin retry as a permitted state transition)
 - [ ] Per-step OpenTelemetry spans named `workflow.<Flow>.<step>`, with attempt count, error, and state as attributes
-- [ ] `Describe()` printing the flow as data (step, kind, deps, transitions claimed) — doubles as dry-run
 - [ ] Deterministic crash-simulation harness: kill the worker at every step boundary and every activity beat against a real database, asserting no uncommitted-progress step effects, no duplicated activity effects, identical terminal states
 - [ ] Property tests on the transitions cross-validator and golden-file tests for generated code
-- [ ] Flow metadata API exposing flow name, owning entity, `In`/`Out` Go types, and step topology for external consumers
 
 ### Out of Scope
 
@@ -53,6 +56,8 @@ A multi-step business process declared in the ent schema executes durably — su
 - Competing with River as a queue — River should be an optional backend behind an adapter boundary; the built-in poller is the zero-dependency default
 
 ## Context
+
+**Current state (2026-08-08).** Phase 1 (Runtime Core) is complete and verified 5/5 against its success criteria: the builder API, all seven DB-step constructors, declarable Activity/Emit, the DI registry, `Codec[In]`, `Result[T]`, `Describe()`, the `meta` package, and four machine-checked invariants. A DB-only flow declared via `Flows()` executes end-to-end in a single transaction with no run row. Phases 2–6 (durability, activities, outbox/chaining, codegen) are unstarted. One risk surfaced for Phase 5/6: ent's codegen only routes schema-stitching through its cycle-breaking `ent/runtime` package when a schema declares `Hooks()`/`Policy()`/`Interceptors()` — it cannot see that a custom `Flows()` method also imports generated types, so entity injection must force that split deliberately (Phase 1's fixture works around it with a no-op passthrough `Hook`).
 
 **Why this exists.** Ent gives entities three homes for behavior: field validators (per-value invariants), hooks (per-mutation invariants), and privacy policies (access control). None can express multi-step business processes. Hooks in particular cannot originate mutations, cannot own transaction boundaries, cannot safely perform external side effects (the dual-write problem), and cannot express sagas with compensation. Every framework ecosystem that started with model callbacks — Rails, Laravel, Django — converged on the same conclusion: invariants live with the data, sequence lives in an explicit, inspectable artifact.
 
@@ -119,4 +124,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-08 after initialization*
+*Last updated: 2026-08-08 after Phase 1 (Runtime Core) completion*
