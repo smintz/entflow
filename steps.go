@@ -28,6 +28,19 @@ func requireUniqueStepName(existing []*step, name, constructor string) {
 	}
 }
 
+// rejectIllegalTransition panics if s declares a Transition claim, naming
+// name and constructor in the message. It is the single mechanism behind
+// every non-mutating-DB-step-claim case that cannot legally claim a status
+// transition: read-only DB constructors (Query, Check, checked by addDBStep)
+// and steps that never touch the database directly at all (Activity, Emit,
+// checked by activity.go) — centralized here so all four cases are covered by
+// one helper instead of two independently-maintained checks (WR-05).
+func rejectIllegalTransition(s *step, name, constructor string) {
+	if s.transition != "" {
+		panic(fmt.Errorf("entflow: step %q (%s) declares Transition(%q), but %s cannot legally claim a status transition", name, constructor, s.transition, constructor))
+	}
+}
+
 // addDBStep is the single shared mechanism behind all seven DB-step
 // constructors below (D-12): it validates the name, applies opts, rejects an
 // illegal Transition claim on a read-only constructor, and appends the step.
@@ -52,8 +65,8 @@ func addDBStep[In any](
 	for _, opt := range opts {
 		opt(s)
 	}
-	if s.transition != "" && (constructor == "Query" || constructor == "Check") {
-		panic(fmt.Errorf("entflow: step %q (%s) declares Transition(%q), but %s is a read-only constructor and cannot claim a status transition", name, constructor, s.transition, constructor))
+	if constructor == "Query" || constructor == "Check" {
+		rejectIllegalTransition(s, name, constructor)
 	}
 
 	f.steps = append(f.steps, s)

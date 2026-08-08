@@ -27,6 +27,11 @@ func Activity[In, Ent, Out any](f *FlowOf[In], name string, fn func(ctx context.
 	for _, opt := range opts {
 		opt(s)
 	}
+	// An Activity never mutates the database directly (it calls out to an
+	// external system via Use[T]), so — by the same rationale addDBStep
+	// applies to Query/Check — it cannot legally claim a status transition
+	// either (WR-05).
+	rejectIllegalTransition(s, name, "Activity")
 	// The run field carries the same DB-step-shaped signature purely so
 	// declaration data stays uniform across step kinds — it is never
 	// invoked. Exec refuses any flow containing an Activity or Emit step
@@ -64,6 +69,10 @@ func Emit[In any](f *FlowOf[In], topic string, opts ...StepOption) *FlowOf[In] {
 	for _, opt := range opts {
 		opt(s)
 	}
+	// An Emit is an outbox write, not a database mutation — by the same
+	// rationale as Activity above, it cannot legally claim a status
+	// transition either (WR-05).
+	rejectIllegalTransition(s, topic, "Emit")
 	// See Activity's identical comment above — unreachable in ordinary
 	// operation, guarded defensively rather than left silently misbehaving.
 	s.run = func(ctx context.Context, tx any, in any) (any, error) {
