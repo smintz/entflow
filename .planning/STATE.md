@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 01
 current_phase_name: runtime-core
-status: executing
-stopped_at: Completed 01-03-PLAN.md
-last_updated: "2026-08-08T12:01:53.935Z"
+status: verifying
+stopped_at: Completed 01-04-PLAN.md — Phase 01 (runtime-core) complete
+last_updated: "2026-08-08T12:16:26.674Z"
 last_activity: 2026-08-08
 last_activity_desc: ROADMAP.md and STATE.md created; REQUIREMENTS.md traceability populated (56/56 mapped)
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-08-08)
 
 Phase: 01 (runtime-core) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-08 — Phase 01 execution started
 
-Progress: [████████░░] 75%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [████████░░] 75%
 | Phase 01 P01 | 12min | 2 tasks | 30 files |
 | Phase 01 P02 | 7min | 3 tasks | 8 files |
 | Phase 01 P03 | 34min | 3 tasks | 13 files |
+| Phase 01 P04 | 28min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,10 @@ Recent decisions affecting current work:
 - [Phase ?]: Plan 01-03: Check's closure returns only an error; its adapter records a nil result so the result-recording path stays uniform across all seven DB-step constructors.
 - [Phase ?]: Plan 01-03: WithSelfStatus is an explicit declared FlowOption (mirroring WithCodec's type-erasure pattern), never inferred from a flow's *Self steps, per the 'codegen must never infer facts by inspecting closure bodies' invariant.
 - [Phase ?]: Plan 01-03: Task 2's fixture and behavior spec required a minimal slice of Task 3's stepoptions.go (Condition/SelfWas/When/After) plus a durable-run refusal check pulled forward into exec.go, to keep every task's commit independently buildable and green (Rule 3 deviation).
+- [Phase ?]: Plan 01-04: meta.Kind duplicates entflow.StepKind's constant strings rather than aliasing it, keeping the meta package's dependency direction strictly one-way (META-01).
+- [Phase ?]: Plan 01-04: Meta() deep-copies every slice (Steps, DependsOn, Conditions) so a caller mutating a returned FlowMeta can never reach the live flow declaration (D-19 immutable snapshot).
+- [Phase ?]: Plan 01-04: META-02's dependency allowlist is derived by running go list -deps against entflow's own entgo.io/ent imports at test time, never hand-curated, so the gate stays meaningful across ent version bumps.
+- [Phase ?]: Plan 01-04: OutType left empty in Phase 1 (documented) — no step kind declares a flow-level output type yet; testdata/callshapes.golden pins the builder-chain call shapes Phase 5's AST parser must handle.
 
 ### Pending Todos
 
@@ -104,6 +109,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-08T12:01:53.920Z
-Stopped at: Completed 01-03-PLAN.md
+Last session: 2026-08-08T12:16:26.658Z
+Stopped at: Completed 01-04-PLAN.md — Phase 01 (runtime-core) complete
 Resume file: None

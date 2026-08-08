@@ -19,8 +19,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **CORE-08**: Developer can use any Go type as flow input by satisfying `entflow.Codec[In]`, with a JSON codec shipped in core and no protobuf dependency required
 - [x] **CORE-09**: Developer can attach a retry policy to an Activity using a small fixed parameter set (`Retry(Backoff(maxAttempts, initial, max))`)
 - [x] **CORE-10**: Developer can read a prior step's typed result inside a later step via `entflow.Result[T](ctx, "step")`
-- [ ] **CORE-11**: The flow builder chain records every codegen-needed fact (step name, kind, dependency edges, transition claims, emit topics, retry policy) as discrete data readable without evaluating any closure body
-- [ ] **CORE-12**: Developer can print a flow's structure as data with `Describe()` (step, kind, deps, transitions claimed) and use that output as a dry-run
+- [x] **CORE-11**: The flow builder chain records every codegen-needed fact (step name, kind, dependency edges, transition claims, emit topics, retry policy) as discrete data readable without evaluating any closure body
+- [x] **CORE-12**: Developer can print a flow's structure as data with `Describe()` (step, kind, deps, transitions claimed) and use that output as a dry-run
 
 ### Durability
 
@@ -87,8 +87,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Metadata Contract
 
-- [ ] **META-01**: External consumers (entconnect) can read flow metadata — flow name, owning entity, `In`/`Out` Go types, step topology — through a dedicated package
-- [ ] **META-02**: entflow's production dependency graph contains `ent` and no transport, protobuf, or descriptor machinery — verified by an automated check
+- [x] **META-01**: External consumers (entconnect) can read flow metadata — flow name, owning entity, `In`/`Out` Go types, step topology — through a dedicated package
+- [x] **META-02**: entflow's production dependency graph contains `ent` and no transport, protobuf, or descriptor machinery — verified by an automated check
 
 ## v2 Requirements
 
@@ -145,11 +145,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CORE-08 | Phase 1 | Complete |
 | CORE-09 | Phase 1 | Complete |
 | CORE-10 | Phase 1 | Complete |
-| CORE-11 | Phase 1 | Pending |
-| CORE-12 | Phase 1 | Pending |
+| CORE-11 | Phase 1 | Complete |
+| CORE-12 | Phase 1 | Complete |
 | SM-01 | Phase 1 | Complete |
-| META-01 | Phase 1 | Pending |
-| META-02 | Phase 1 | Pending |
+| META-01 | Phase 1 | Complete |
+| META-02 | Phase 1 | Complete |
 | DUR-01 | Phase 2 | Pending |
 | DUR-02 | Phase 2 | Pending |
 | DUR-03 | Phase 2 | Pending |
