@@ -47,7 +47,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. A developer can call `Describe()` on a flow and see its full step topology (name, kind, deps, transition claims, emit topics, retry policy) printed as data without any step closure ever executing; the same topology data is exposed to an external consumer through a dedicated `meta` package that never imports transport or protobuf machinery.
   5. A developer can declare a status field's legal transitions with `entflow.Transitions(map[string][]string{...})` and read a prior step's typed result inside a later step via `entflow.Result[T](ctx, "step")`.
 
-**Plans**: 3/4 plans executed
+**Plans**: 4/4 plans executed
 
 Plans:
 **Wave 1**
@@ -64,7 +64,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 01-04-PLAN.md — Metadata and invariants: meta package, Describe(), extractability proof, call-shape golden, META-02 dependency gate, Transitions round-trip
+- [x] 01-04-PLAN.md — Metadata and invariants: meta package, Describe(), extractability proof, call-shape golden, META-02 dependency gate, Transitions round-trip
 
 ### Phase 2: Durability
 
@@ -150,7 +150,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Runtime Core | 3/4 | In Progress|  |
+| 1. Runtime Core | 4/4 | In Progress|  |
 | 2. Durability | 0/TBD | Not started | - |
 | 3. Activities | 0/TBD | Not started | - |
 | 4. Outbox & Flow Chaining | 0/TBD | Not started | - |
