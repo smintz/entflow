@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"sync"
 )
 
@@ -71,7 +72,7 @@ func Result[T any](ctx context.Context, step string) (T, error) {
 	}
 	typed, ok := v.(T)
 	if !ok {
-		return zero, fmt.Errorf("%w: step %q produced %T, want %T", ErrResultTypeMismatch, step, v, zero)
+		return zero, fmt.Errorf("%w: step %q produced %T, want %s", ErrResultTypeMismatch, step, v, reflect.TypeFor[T]())
 	}
 	return typed, nil
 }

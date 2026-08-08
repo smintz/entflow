@@ -3,6 +3,7 @@ package entflow
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 )
 
 // Codec[In] serializes and deserializes a flow's input value. The interface
@@ -65,8 +66,7 @@ func resolveCodec[In any](cfg *flowConfig) Codec[In] {
 	}
 	c, ok := cfg.codec.(Codec[In])
 	if !ok {
-		var zero In
-		panic(fmt.Errorf("entflow: WithCodec supplied a codec for a different input type (want entflow.Codec[%T])", zero))
+		panic(fmt.Errorf("entflow: WithCodec supplied a codec for a different input type (want entflow.Codec[%s])", reflect.TypeFor[In]()))
 	}
 	return c
 }
