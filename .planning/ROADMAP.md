@@ -24,7 +24,7 @@ This is one defensible split among a few; the key invariant preserved is that th
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Runtime Core** - The flow/step builder API and DB-only Multi-style execution work entirely by hand, with zero codegen dependency
+- [x] **Phase 1: Runtime Core** - The flow/step builder API and DB-only Multi-style execution work entirely by hand, with zero codegen dependency (completed 2026-08-08)
 - [ ] **Phase 2: Durability** - Runs persist, survive worker crashes on real Postgres, and are queryable/controllable as ordinary privacy-governed ent entities
 - [ ] **Phase 3: Activities** - External calls execute safely via the three-beat protocol with framework-supplied idempotency, leases, and retry/backoff
 - [ ] **Phase 4: Outbox & Flow Chaining** - Emitted events deliver at-least-once without holding a transaction open, and can start other flows
@@ -150,7 +150,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Runtime Core | 4/4 | In Progress|  |
+| 1. Runtime Core | 4/4 | Complete    | 2026-08-08 |
 | 2. Durability | 0/TBD | Not started | - |
 | 3. Activities | 0/TBD | Not started | - |
 | 4. Outbox & Flow Chaining | 0/TBD | Not started | - |
