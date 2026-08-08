@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 1
-current_phase_name: Runtime Core
+current_phase: 01
+current_phase_name: runtime-core
 status: executing
 stopped_at: Phase 1 context gathered
-last_updated: "2026-08-08T10:42:20.801Z"
+last_updated: "2026-08-08T11:14:48.746Z"
 last_activity: 2026-08-08
 last_activity_desc: ROADMAP.md and STATE.md created; REQUIREMENTS.md traceability populated (56/56 mapped)
 progress:
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-08)
 
 **Core value:** A multi-step business process declared in the ent schema executes durably — surviving crashes at any point without duplicating external effects or committing a step without its progress record.
-**Current focus:** Phase 1 — Runtime Core
+**Current focus:** Phase 01 — runtime-core
 
 ## Current Position
 
-Phase: 1 of 6 (Runtime Core)
-Plan: 0 of TBD in current phase
-Status: Ready to execute
-Last activity: 2026-08-08 — ROADMAP.md and STATE.md created; REQUIREMENTS.md traceability populated (56/56 mapped)
+Phase: 01 (runtime-core) — EXECUTING
+Plan: 1 of 4
+Status: Executing Phase 01
+Last activity: 2026-08-08 — Phase 01 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
