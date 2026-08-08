@@ -11,15 +11,19 @@ package entflow
 
 import (
 	"context"
+	"reflect"
+
+	"github.com/smintz/entflow/meta"
 )
 
 // Flow is the schema-facing interface returned from a schema's Flows()
-// method: func (Order) Flows() []entflow.Flow. It is deliberately minimal in
-// Phase 1 — additional methods (Meta()) are added by a later plan once the
-// metadata contract is designed; keeping it to Name() now is what lets the
-// fixture schema compile from this tracer onward without churn later.
+// method: func (Order) Flows() []entflow.Flow. Meta() and Describe() make a
+// heterogeneous []Flow directly useful to codegen and to entconnect without
+// a type assertion back to a concrete *FlowOf[In].
 type Flow interface {
 	Name() string
+	Meta() meta.FlowMeta
+	Describe() string
 }
 
 // flowConfig holds construction-time options for New. codec is stored as an
@@ -31,6 +35,7 @@ type Flow interface {
 type flowConfig struct {
 	codec      any
 	selfStatus func(ctx context.Context, tx any, in any) (string, error)
+	owner      string
 }
 
 // FlowOption configures a FlowOf at construction time via New.
@@ -53,6 +58,10 @@ type FlowOf[In any] struct {
 	// condition but no reader fails at Exec time (D-10) rather than at
 	// construction, so the missing-option error can name the flow.
 	selfStatusReader func(ctx context.Context, tx any, in any) (string, error)
+
+	// owner is the name of the entity this flow was declared on, supplied
+	// via WithOwner. Empty unless the caller declared one.
+	owner string
 }
 
 // New constructs a flow builder named name, typed to input In. With no
@@ -67,6 +76,18 @@ func New[In any](name string, opts ...FlowOption) *FlowOf[In] {
 		name:             name,
 		codec:            resolveCodec[In](cfg),
 		selfStatusReader: cfg.selfStatus,
+		owner:            cfg.owner,
+	}
+}
+
+// WithOwner declares the name of the entity a flow is owned by — flow
+// metadata's Owner field. Phase 1 has no automatic binding from a flow to
+// its owning entity (no codegen exists yet to infer it from), so this is an
+// explicit FlowOption rather than inference over the schema type — the same
+// reasoning that produced WithSelfStatus (exec.go).
+func WithOwner(name string) FlowOption {
+	return func(cfg *flowConfig) {
+		cfg.owner = name
 	}
 }
 
@@ -79,6 +100,62 @@ func (f *FlowOf[In]) codecOf() Codec[In] {
 // Name returns the flow's declared name, satisfying the Flow interface.
 func (f *FlowOf[In]) Name() string {
 	return f.name
+}
+
+// Meta returns an immutable snapshot of f's declared structure — every
+// step's name, kind, dependency edges, transition claim, emit topic, retry
+// policy, and conditions — read entirely off each step's DATA fields, never
+// off its run closure field (step.go documents why that separation makes
+// this structural, not conventional, per CORE-11/D-19). Every slice is a
+// fresh copy, so a caller mutating a returned FlowMeta's Steps, or a
+// StepMeta's DependsOn or Conditions, can never reach back into f's live
+// declaration.
+func (f *FlowOf[In]) Meta() meta.FlowMeta {
+	steps := make([]meta.StepMeta, len(f.steps))
+	for i, s := range f.steps {
+		steps[i] = stepMetaOf(s)
+	}
+	return meta.FlowMeta{
+		Name:   f.name,
+		Owner:  f.owner,
+		InType: reflect.TypeFor[In]().String(),
+		Steps:  steps,
+	}
+}
+
+// stepMetaOf projects s's declaration data into a meta.StepMeta, deep-copying
+// every slice so the returned value is independent of s and can never be
+// used to mutate the live step.
+func stepMetaOf(s *step) meta.StepMeta {
+	var dependsOn []string
+	if len(s.dependsOn) > 0 {
+		dependsOn = append([]string(nil), s.dependsOn...)
+	}
+
+	var conditions []meta.ConditionMeta
+	for _, c := range s.conditions {
+		conditions = append(conditions, meta.ConditionMeta{Kind: c.Kind, Value: c.Value})
+	}
+
+	var retry *meta.RetryMeta
+	if s.retry != nil {
+		retry = &meta.RetryMeta{
+			MaxAttempts: s.retry.MaxAttempts,
+			Initial:     s.retry.Initial,
+			Max:         s.retry.Max,
+		}
+	}
+
+	return meta.StepMeta{
+		Name:        s.name,
+		Kind:        meta.Kind(s.kind),
+		Constructor: s.constructor,
+		DependsOn:   dependsOn,
+		Transition:  s.transition,
+		EmitTopic:   s.emitTopic,
+		Conditions:  conditions,
+		Retry:       retry,
+	}
 }
 
 // FlowsOf performs the interface{ Flows() []Flow } type assertion against

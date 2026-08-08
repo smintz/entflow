@@ -29,7 +29,7 @@ type RefundResult struct {
 // their execution semantics. That refusal, not a working-but-unsafe inline
 // path, is the intended Phase 1 demo.
 func (Order) Flows() []entflow.Flow {
-	f := entflow.New[*CancelOrderRequest]("CancelOrder")
+	f := entflow.New[*CancelOrderRequest]("CancelOrder", entflow.WithOwner("Order"))
 	entflow.UpdateSelf(f, "cancel", func(ctx context.Context, tx *ent.Tx, in *CancelOrderRequest) (*ent.Order, error) {
 		return tx.Order.UpdateOneID(in.OrderID).
 			SetStatus(order.StatusCancelled).
