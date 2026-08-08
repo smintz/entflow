@@ -37,8 +37,8 @@ func Backoff(maxAttempts int, initial, max time.Duration) RetryPolicy {
 // by its constructor (addDBStep / Activity), so the option itself can tell.
 func Retry(p RetryPolicy) StepOption {
 	return func(s *step) {
-		if s.kind == KindDB {
-			panic(fmt.Errorf("entflow: step %q: Retry is not valid on a DB step; retry policies apply to Activities only", s.name))
+		if s.kind != KindActivity {
+			panic(fmt.Errorf("entflow: step %q: Retry is not valid on a %s step; retry policies apply to Activities only", s.name, s.kind))
 		}
 		rp := p
 		s.retry = &rp

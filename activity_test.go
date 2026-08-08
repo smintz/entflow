@@ -106,6 +106,17 @@ func TestRetryOnDBStepPanics(t *testing.T) {
 	})
 }
 
+// TestRetryOnEmitStepPanics is TestRetryOnDBStepPanics's Emit-shaped twin:
+// Retry's doc comment states retry policies apply to Activities only, so an
+// Emit step (which never mutates the database and is not an Activity either)
+// must be rejected at declaration time exactly like a DB step is (WR-02).
+func TestRetryOnEmitStepPanics(t *testing.T) {
+	f := New[string]("X")
+	requirePanicsWithError(t, func() {
+		Emit(f, "order.cancelled", Retry(Backoff(3, time.Second, time.Minute)))
+	})
+}
+
 // TestActivityCompileFail proves CORE-04 is machine-checked, not asserted in
 // prose: internal/testdata/compilefail/activity_tx.go declares an Activity
 // closure with a transaction parameter, and building it must fail, naming
