@@ -23,22 +23,26 @@ const (
 // step is the internal, unexported representation of a single declared step.
 //
 // Declaration DATA lives in plain fields that hold no function values — name,
-// kind, constructor, dependency edges, the transition claimed, and the emit
-// topic. The closure itself lives in exactly one, separate field: run. This
-// separation is the structural half of D-19/CORE-11 — code that only ever
-// touches the data fields (Meta(), Describe(), and later Phase 5's AST
-// extraction) structurally cannot reach the closure, and a test asserts this
-// invariant by counting invocations.
+// kind, constructor, dependency edges, conditions, the transition claimed,
+// the emit topic, and the retry policy. The closure itself lives in exactly
+// one, separate field: run. This separation is the structural half of
+// D-19/CORE-11 — code that only ever touches the data fields (Meta(),
+// Describe(), and later Phase 5's AST extraction) structurally cannot reach
+// the closure, and a test asserts this invariant by counting invocations.
 type step struct {
 	name        string
 	kind        StepKind
 	constructor string
 	dependsOn   []string
+	conditions  []Condition
 	transition  string
 	emitTopic   string
+	retry       *RetryPolicy
 
 	// run is the type-erased adapter around the user's typed closure. It is
-	// the ONLY field on step that holds a function value.
+	// the ONLY field on step that holds a function value. For Activity and
+	// Emit steps it is never invoked by Exec in Phase 1 (D-13) — see
+	// activity.go.
 	run func(ctx context.Context, tx any, in any) (any, error)
 }
 
