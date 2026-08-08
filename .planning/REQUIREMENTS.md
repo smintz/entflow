@@ -9,12 +9,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Core Runtime
 
-- [ ] **CORE-01**: Developer can declare a flow inside an ent schema file via a `Flows()` method, with the input type supplied as a type parameter (`entflow.New[In]("Name")`)
-- [ ] **CORE-02**: Developer can write step bodies as Go closures inline in the flow declaration, with signatures compile-checked against the flow's input type
+- [x] **CORE-01**: Developer can declare a flow inside an ent schema file via a `Flows()` method, with the input type supplied as a type parameter (`entflow.New[In]("Name")`)
+- [x] **CORE-02**: Developer can write step bodies as Go closures inline in the flow declaration, with signatures compile-checked against the flow's input type
 - [ ] **CORE-03**: Developer can declare DB steps (`Step`, `CreateSelf`, `UpdateSelf`, `Create`, `Update`, `Query`, `Check`) whose closures receive `*ent.Tx`, so entity hooks and privacy policies fire on every mutation
 - [ ] **CORE-04**: Developer can declare Activity steps whose closures do not receive `*ent.Tx`, making a DB write from inside an external call a compile error
 - [ ] **CORE-05**: Developer can declare step ordering with `After(...)` and conditional execution with `When(...)` / `SelfWas(...)`
-- [ ] **CORE-06**: Developer can execute a DB-only flow end-to-end inside a single transaction with no run-row persistence (Ecto.Multi-equivalent baseline)
+- [x] **CORE-06**: Developer can execute a DB-only flow end-to-end inside a single transaction with no run-row persistence (Ecto.Multi-equivalent baseline)
 - [ ] **CORE-07**: Developer can register external clients at startup with `entflow.Provide(registry, client)` and retrieve them typed inside activity bodies with `entflow.Use[T](ctx)`
 - [ ] **CORE-08**: Developer can use any Go type as flow input by satisfying `entflow.Codec[In]`, with a JSON codec shipped in core and no protobuf dependency required
 - [ ] **CORE-09**: Developer can attach a retry policy to an Activity using a small fixed parameter set (`Retry(Backoff(maxAttempts, initial, max))`)
@@ -62,7 +62,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### State Machine Cross-Validation
 
-- [ ] **SM-01**: Developer can declare a status field's legal transitions with `entflow.Transitions(map[string][]string{...})`
+- [x] **SM-01**: Developer can declare a status field's legal transitions with `entflow.Transitions(map[string][]string{...})`
 - [ ] **SM-02**: Codegen produces a hook that rejects any status change not present in the transitions map, with no `SkipHook` escape
 - [ ] **SM-03**: A step claiming `Transition("x")` that is not a legal edge in the map fails code generation with an actionable error
 - [ ] **SM-04**: A transition declared in the map but claimed by no step produces a generation warning that is suppressible per-edge (never only a coarse global disable)
@@ -135,19 +135,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CORE-01 | Phase 1 | Pending |
-| CORE-02 | Phase 1 | Pending |
+| CORE-01 | Phase 1 | Complete |
+| CORE-02 | Phase 1 | Complete |
 | CORE-03 | Phase 1 | Pending |
 | CORE-04 | Phase 1 | Pending |
 | CORE-05 | Phase 1 | Pending |
-| CORE-06 | Phase 1 | Pending |
+| CORE-06 | Phase 1 | Complete |
 | CORE-07 | Phase 1 | Pending |
 | CORE-08 | Phase 1 | Pending |
 | CORE-09 | Phase 1 | Pending |
 | CORE-10 | Phase 1 | Pending |
 | CORE-11 | Phase 1 | Pending |
 | CORE-12 | Phase 1 | Pending |
-| SM-01 | Phase 1 | Pending |
+| SM-01 | Phase 1 | Complete |
 | META-01 | Phase 1 | Pending |
 | META-02 | Phase 1 | Pending |
 | DUR-01 | Phase 2 | Pending |
@@ -193,6 +193,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEST-04 | Phase 6 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 56 total
 - Mapped to phases: 56
 - Unmapped: 0 ✓

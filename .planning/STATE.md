@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: runtime-core
 status: executing
-stopped_at: Phase 1 context gathered
-last_updated: "2026-08-08T11:14:48.746Z"
+stopped_at: Completed 01-01-PLAN.md
+last_updated: "2026-08-08T11:28:19.075Z"
 last_activity: 2026-08-08
 last_activity_desc: ROADMAP.md and STATE.md created; REQUIREMENTS.md traceability populated (56/56 mapped)
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 4
-  completed_plans: 0
+  completed_plans: 1
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-08)
 ## Current Position
 
 Phase: 01 (runtime-core) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 01
+Plan: 2 of 4
+Status: Ready to execute
 Last activity: 2026-08-08 — Phase 01 execution started
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 25%
 
 ## Performance Metrics
 
@@ -54,6 +54,11 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: N/A
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 01 P01 | 12min | 2 tasks | 30 files |
 
 ## Accumulated Context
 
@@ -65,6 +70,8 @@ Recent decisions affecting current work:
 - [Roadmap]: Runtime-first, codegen-last ordering (Phases 1-4 durable/hand-written, Phases 5-6 codegen) — every capability through the outbox milestone is expressible by hand, codegen is additive automation only.
 - [Roadmap]: Codegen milestone split into two phases (5: entity-injection spike, 6: cross-validation + runner generation) to isolate the single highest-risk, least-precedented mechanism (schemast-based run-entity injection with a self-referential transitions annotation) from the lower-risk template/validation work around it.
 - [Roadmap]: Crash-simulation harness is a living artifact — born in Phase 2 (Durability) as a release gate, extended in Phase 3 (activity beats) and Phase 4 (relay delivery), not a single late deliverable.
+- [Phase ?]: Task 1 auto-selected A1-N1: UpdateSelf(f, name, closure, opts...) with closure third, variadic StepOption last; Flow stays the schema-facing interface name, generic builder is FlowOf[In].
+- [Phase ?]: Added a genuine no-op passthrough Hook to the fixture Order schema to force ent's codegen to route schema-stitching through the separate ent/runtime package, breaking a real import cycle between schema and ent that Phase 1 research had assumed would not occur.
 
 ### Pending Todos
 
@@ -91,6 +98,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-08T09:26:31.969Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-runtime-core/01-CONTEXT.md
+Last session: 2026-08-08T11:28:19.034Z
+Stopped at: Completed 01-01-PLAN.md
+Resume file: None

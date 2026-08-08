@@ -47,12 +47,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. A developer can call `Describe()` on a flow and see its full step topology (name, kind, deps, transition claims, emit topics, retry policy) printed as data without any step closure ever executing; the same topology data is exposed to an external consumer through a dedicated `meta` package that never imports transport or protobuf machinery.
   5. A developer can declare a status field's legal transitions with `entflow.Transitions(map[string][]string{...})` and read a prior step's typed result inside a later step via `entflow.Result[T](ctx, "step")`.
 
-**Plans**: 4 plans
+**Plans**: 1/4 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 01-01-PLAN.md — Walking skeleton: bootstrap the module, fixture ent schema, and prove one schema-declared flow commits a database mutation end-to-end
+- [x] 01-01-PLAN.md — Walking skeleton: bootstrap the module, fixture ent schema, and prove one schema-declared flow commits a database mutation end-to-end
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -150,7 +150,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Runtime Core | 0/4 | Planned | - |
+| 1. Runtime Core | 1/4 | In Progress|  |
 | 2. Durability | 0/TBD | Not started | - |
 | 3. Activities | 0/TBD | Not started | - |
 | 4. Outbox & Flow Chaining | 0/TBD | Not started | - |
