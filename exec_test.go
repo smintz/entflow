@@ -12,28 +12,27 @@ import (
 	"github.com/smintz/entflow/internal/testdata/entclient"
 )
 
-// TestCancelOrderFlow proves the Phase 1 walking skeleton end to end: a flow
-// declared on a schema via Flows() is retrievable through FlowsOf, executes
-// through Exec inside a caller-supplied *ent.Tx, and the resulting status
-// change is readable from the database after commit — through the
-// NON-transactional client, which is what makes this a real end-to-end proof
-// rather than a test of in-memory transaction state.
-func TestCancelOrderFlow(t *testing.T) {
+// TestRequiresDurableRunCancelOrderFlow proves the intended Phase 1 demo:
+// the real worked-example CancelOrder flow (entflow.md §3.1, in full, with
+// its refund Activity and order.cancelled Emit) is declarable and
+// describable, but Exec refuses it with ErrRequiresDurableRun before
+// executing anything, and the seeded order's status is left untouched.
+//
+// This supersedes Plan 01's TestCancelOrderFlow: once this plan's second
+// task extended the fixture flow with the Activity and Emit steps from
+// entflow.md §3.1, the flow became durable-only per D-13, and the old
+// "Exec commits a DB mutation" proof no longer applies to it — a plain
+// DB-only flow (this plan's third task's exec_test.go additions) is what
+// proves that behavior now.
+func TestRequiresDurableRunCancelOrderFlow(t *testing.T) {
 	ctx := context.Background()
 	client := entclient.New(t)
 
-	// Seed one Order with status paid.
-	seeded, err := client.Order.Create().
-		SetStatus(order.StatusPaid).
-		Save(ctx)
+	seeded, err := client.Order.Create().SetStatus(order.StatusPaid).Save(ctx)
 	require.NoError(t, err)
 
-	// Retrieve the flow declared on the schema via explicit registration
-	// (D-06) — no reflection over the schema package.
 	flows := entflow.FlowsOf(schema.Order{})
 	require.Len(t, flows, 1)
-	require.Equal(t, "CancelOrder", flows[0].Name())
-
 	flow, ok := flows[0].(*entflow.FlowOf[*schema.CancelOrderRequest])
 	require.True(t, ok, "expected *entflow.FlowOf[*schema.CancelOrderRequest], got %T", flows[0])
 
@@ -41,13 +40,12 @@ func TestCancelOrderFlow(t *testing.T) {
 	require.NoError(t, err)
 
 	err = flow.Exec(ctx, tx, &schema.CancelOrderRequest{OrderID: seeded.ID})
-	require.NoError(t, err)
+	require.Error(t, err)
+	require.ErrorIs(t, err, entflow.ErrRequiresDurableRun)
 
-	require.NoError(t, tx.Commit())
+	require.NoError(t, tx.Rollback())
 
-	// Re-query through the plain, NON-transactional client — this is the
-	// real end-to-end proof that the mutation committed to the database.
 	got, err := client.Order.Get(ctx, seeded.ID)
 	require.NoError(t, err)
-	require.Equal(t, order.StatusCancelled, got.Status)
+	require.Equal(t, order.StatusPaid, got.Status, "no step should have executed")
 }
