@@ -98,7 +98,7 @@ coverage:
         status: pass
     human_judgment: false
 
-duration: 35min
+duration: 12min
 completed: 2026-08-08
 status: complete
 ---
@@ -109,9 +109,9 @@ status: complete
 
 ## Performance
 
-- **Duration:** ~35 min
+- **Duration:** ~12 min
 - **Started:** 2026-08-08T11:16:17Z
-- **Completed:** 2026-08-08T11:52:00Z
+- **Completed:** 2026-08-08T11:27:48Z
 - **Tasks:** 2 (Task 1: checkpoint:decision, Task 2: tracer)
 - **Files modified:** 30 (10 hand-written, 20 ent-generated)
 
@@ -192,3 +192,7 @@ None — no external service configuration required.
 ---
 *Phase: 01-runtime-core*
 *Completed: 2026-08-08*
+
+## Self-Check: PASSED
+
+All created files verified present on disk (flow.go, step.go, exec.go, transitions.go, exec_test.go, go.mod, go.sum, .github/workflows/ci.yml, internal/testdata/ent/schema/order.go, internal/testdata/ent/schema/order_flows.go, internal/testdata/entclient/client.go, internal/testdata/ent/client.go, this SUMMARY.md). Both commits (`f9c49bd`, `c6f4859`) verified present in `git log --oneline --all`.
