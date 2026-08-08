@@ -106,6 +106,31 @@ func TestRetryOnDBStepPanics(t *testing.T) {
 	})
 }
 
+// TestTransitionOnActivityPanics proves declaring Transition(...) on an
+// Activity step panics at declaration time — an Activity never mutates the
+// database directly, so it cannot legally claim a status transition, by the
+// same rationale addDBStep already applies to Query/Check (WR-05).
+func TestTransitionOnActivityPanics(t *testing.T) {
+	f := New[string]("Refund")
+	requirePanicsWithError(t, func() {
+		Activity(f, "refund",
+			func(ctx context.Context, self string, att Attempt) (JSON[int], error) {
+				return NewJSON(0), nil
+			},
+			Transition("refunded"),
+		)
+	})
+}
+
+// TestTransitionOnEmitPanics is TestTransitionOnActivityPanics's Emit-shaped
+// twin.
+func TestTransitionOnEmitPanics(t *testing.T) {
+	f := New[string]("CancelOrder")
+	requirePanicsWithError(t, func() {
+		Emit(f, "order.cancelled", Transition("cancelled"))
+	})
+}
+
 // TestRetryRevalidatesBypassedPolicy proves Retry re-validates a RetryPolicy
 // constructed directly (bypassing Backoff's own validation, possible because
 // every RetryPolicy field is exported) rather than trusting whatever it is

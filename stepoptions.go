@@ -26,9 +26,11 @@ func When(c Condition) StepOption {
 // Transition declares the status value this step's mutation moves the owning
 // entity to. It is claim-only in Phase 1 (SM-01/D-14) — the enforcing hook and
 // the bidirectional cross-validator against a Transitions annotation arrive
-// in Phase 6. Declaring Transition on a Query or Check step panics at
-// declaration time (steps.go's addDBStep) — a read-only step cannot legally
-// claim a status transition.
+// in Phase 6. Declaring Transition on a Query or Check step, or on an
+// Activity or Emit step (steps.go's rejectIllegalTransition, called from
+// addDBStep and activity.go), panics at declaration time — none of these four
+// constructors mutate the database directly, so none can legally claim a
+// status transition.
 func Transition(to string) StepOption {
 	return func(s *step) {
 		s.transition = to
