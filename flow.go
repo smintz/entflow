@@ -9,6 +9,10 @@
 // mirrors how ent's own generated ent/runtime package discovers Hooks().
 package entflow
 
+import (
+	"context"
+)
+
 // Flow is the schema-facing interface returned from a schema's Flows()
 // method: func (Order) Flows() []entflow.Flow. It is deliberately minimal in
 // Phase 1 — additional methods (Meta()) are added by a later plan once the
@@ -20,9 +24,13 @@ type Flow interface {
 
 // flowConfig holds construction-time options for New. codec is stored as an
 // untyped any because flowConfig itself is not generic — New[In] resolves it
-// back to Codec[In] via resolveCodec (codec.go).
+// back to Codec[In] via resolveCodec (codec.go). selfStatus is already
+// type-erased to its final shape by WithSelfStatus (exec.go) — no assert-back
+// is needed for it because, unlike the codec, its erased signature never
+// varies by In beyond the any boxing WithSelfStatus itself performs.
 type flowConfig struct {
-	codec any
+	codec      any
+	selfStatus func(ctx context.Context, tx any, in any) (string, error)
 }
 
 // FlowOption configures a FlowOf at construction time via New.
@@ -39,6 +47,12 @@ type FlowOf[In any] struct {
 	name  string
 	steps []*step
 	codec Codec[In]
+
+	// selfStatusReader is the type-erased adapter WithSelfStatus installs.
+	// nil unless the flow declared one; a flow with a When(SelfWas(...))
+	// condition but no reader fails at Exec time (D-10) rather than at
+	// construction, so the missing-option error can name the flow.
+	selfStatusReader func(ctx context.Context, tx any, in any) (string, error)
 }
 
 // New constructs a flow builder named name, typed to input In. With no
@@ -49,7 +63,11 @@ func New[In any](name string, opts ...FlowOption) *FlowOf[In] {
 	for _, opt := range opts {
 		opt(cfg)
 	}
-	return &FlowOf[In]{name: name, codec: resolveCodec[In](cfg)}
+	return &FlowOf[In]{
+		name:             name,
+		codec:            resolveCodec[In](cfg),
+		selfStatusReader: cfg.selfStatus,
+	}
 }
 
 // codecOf returns f's resolved codec. Unexported: the executor (this
