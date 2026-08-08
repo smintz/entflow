@@ -1,0 +1,29 @@
+Flow: CancelOrder
+Owner: Order
+InType: *schema.CancelOrderRequest
+OutType: (none)
+Steps:
+  - cancel
+      kind: db
+      constructor: UpdateSelf
+      depends_on: (none)
+      transition: cancelled
+      emit_topic: (none)
+      conditions: (none)
+      retry: (none)
+  - refund
+      kind: activity
+      constructor: Activity
+      depends_on: (none)
+      transition: (none)
+      emit_topic: (none)
+      conditions: self_was=paid
+      retry: max_attempts=5 initial=1s max=1m0s
+  - order.cancelled
+      kind: emit
+      constructor: Emit
+      depends_on: cancel
+      transition: (none)
+      emit_topic: order.cancelled
+      conditions: (none)
+      retry: (none)
