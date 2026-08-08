@@ -15,10 +15,10 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **CORE-04**: Developer can declare Activity steps whose closures do not receive `*ent.Tx`, making a DB write from inside an external call a compile error
 - [ ] **CORE-05**: Developer can declare step ordering with `After(...)` and conditional execution with `When(...)` / `SelfWas(...)`
 - [x] **CORE-06**: Developer can execute a DB-only flow end-to-end inside a single transaction with no run-row persistence (Ecto.Multi-equivalent baseline)
-- [ ] **CORE-07**: Developer can register external clients at startup with `entflow.Provide(registry, client)` and retrieve them typed inside activity bodies with `entflow.Use[T](ctx)`
-- [ ] **CORE-08**: Developer can use any Go type as flow input by satisfying `entflow.Codec[In]`, with a JSON codec shipped in core and no protobuf dependency required
+- [x] **CORE-07**: Developer can register external clients at startup with `entflow.Provide(registry, client)` and retrieve them typed inside activity bodies with `entflow.Use[T](ctx)`
+- [x] **CORE-08**: Developer can use any Go type as flow input by satisfying `entflow.Codec[In]`, with a JSON codec shipped in core and no protobuf dependency required
 - [ ] **CORE-09**: Developer can attach a retry policy to an Activity using a small fixed parameter set (`Retry(Backoff(maxAttempts, initial, max))`)
-- [ ] **CORE-10**: Developer can read a prior step's typed result inside a later step via `entflow.Result[T](ctx, "step")`
+- [x] **CORE-10**: Developer can read a prior step's typed result inside a later step via `entflow.Result[T](ctx, "step")`
 - [ ] **CORE-11**: The flow builder chain records every codegen-needed fact (step name, kind, dependency edges, transition claims, emit topics, retry policy) as discrete data readable without evaluating any closure body
 - [ ] **CORE-12**: Developer can print a flow's structure as data with `Describe()` (step, kind, deps, transitions claimed) and use that output as a dry-run
 
@@ -141,10 +141,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CORE-04 | Phase 1 | Pending |
 | CORE-05 | Phase 1 | Pending |
 | CORE-06 | Phase 1 | Complete |
-| CORE-07 | Phase 1 | Pending |
-| CORE-08 | Phase 1 | Pending |
+| CORE-07 | Phase 1 | Complete |
+| CORE-08 | Phase 1 | Complete |
 | CORE-09 | Phase 1 | Pending |
-| CORE-10 | Phase 1 | Pending |
+| CORE-10 | Phase 1 | Complete |
 | CORE-11 | Phase 1 | Pending |
 | CORE-12 | Phase 1 | Pending |
 | SM-01 | Phase 1 | Complete |

@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: runtime-core
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-08-08T11:28:19.075Z"
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-08-08T11:36:46.432Z"
 last_activity: 2026-08-08
 last_activity_desc: ROADMAP.md and STATE.md created; REQUIREMENTS.md traceability populated (56/56 mapped)
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-08)
 ## Current Position
 
 Phase: 01 (runtime-core) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-08-08 — Phase 01 execution started
 
-Progress: [███░░░░░░░] 25%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [███░░░░░░░] 25%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 01 P01 | 12min | 2 tasks | 30 files |
+| Phase 01 P02 | 7min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,7 @@ Recent decisions affecting current work:
 - [Roadmap]: Crash-simulation harness is a living artifact — born in Phase 2 (Durability) as a release gate, extended in Phase 3 (activity beats) and Phase 4 (relay delivery), not a single late deliverable.
 - [Phase ?]: Task 1 auto-selected A1-N1: UpdateSelf(f, name, closure, opts...) with closure third, variadic StepOption last; Flow stays the schema-facing interface name, generic builder is FlowOf[In].
 - [Phase ?]: Added a genuine no-op passthrough Hook to the fixture Order schema to force ent's codegen to route schema-stitching through the separate ent/runtime package, breaking a real import cycle between schema and ent that Phase 1 research had assumed would not occur.
+- [Phase ?]: Plan 01-02: codec_test.go and result_test.go use internal package entflow (not entflow_test) to exercise unexported seams (flowConfig, codecOf, withResults/putResult) that Plan 03's executor also needs.
 
 ### Pending Todos
 
@@ -98,6 +100,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-08T11:28:19.034Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-08-08T11:36:46.417Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None
