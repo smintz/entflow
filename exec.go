@@ -32,8 +32,15 @@ type TxOpener[T Tx] interface {
 // declared argument, rather than something inferred from the *Self steps,
 // is required by the "codegen must never infer facts by inspecting closure
 // bodies" invariant.
+//
+// Like WithCodec, the reader's In type is recorded (as cfg.selfStatusInType)
+// so New[In] can eagerly reject a mismatch at the flow's declaration site —
+// a caller who accidentally supplies a reader built for a different flow's
+// input type gets a panic from New, not a runtime error deferred until a
+// SelfWas-gated step is actually reached (WR-04).
 func WithSelfStatus[In, TX any](fn func(ctx context.Context, tx TX, in In) (string, error)) FlowOption {
 	return func(cfg *flowConfig) {
+		cfg.selfStatusInType = reflect.TypeFor[In]()
 		cfg.selfStatus = func(ctx context.Context, tx any, in any) (string, error) {
 			typedTx, ok := tx.(TX)
 			if !ok {

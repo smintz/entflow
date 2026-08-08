@@ -278,6 +278,29 @@ func TestSelfWasWithoutReaderErrors(t *testing.T) {
 	require.Contains(t, err.Error(), "WithSelfStatus")
 }
 
+// TestNewPanicsOnSelfStatusInTypeMismatch proves New[In] eagerly rejects a
+// WithSelfStatus reader declared for a different input type at the flow's
+// construction site — the same declaration-time protection WithCodec already
+// gets via resolveCodec's type assertion (WR-04). Before the fix, this
+// mismatch was invisible until a SelfWas-gated step actually ran and hit the
+// reader's own runtime type-assertion error.
+func TestNewPanicsOnSelfStatusInTypeMismatch(t *testing.T) {
+	badOpt := entflow.WithSelfStatus(func(ctx context.Context, tx *txCounter, in string) (string, error) {
+		return "draft", nil
+	})
+
+	var recovered any
+	func() {
+		defer func() { recovered = recover() }()
+		entflow.New[int]("Mismatched", badOpt)
+	}()
+
+	require.NotNil(t, recovered, "expected New to panic eagerly on a WithSelfStatus In-type mismatch")
+	err, ok := recovered.(error)
+	require.True(t, ok, "recovered panic value must be an error, got %T", recovered)
+	require.Contains(t, err.Error(), "WithSelfStatus")
+}
+
 // TestRecoverStepPanicYieldsStepError proves a panic inside a step closure,
 // with an arbitrary value, is recovered at that step's boundary and
 // returned as a *StepError whose Step and Kind match, with a non-empty

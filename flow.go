@@ -11,6 +11,7 @@ package entflow
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
 	"github.com/smintz/entflow/meta"
@@ -35,7 +36,13 @@ type Flow interface {
 type flowConfig struct {
 	codec      any
 	selfStatus func(ctx context.Context, tx any, in any) (string, error)
-	owner      string
+	// selfStatusInType is the In type WithSelfStatus's fn was declared
+	// against — set alongside selfStatus so New[In] can eagerly compare it to
+	// its own In, giving WithSelfStatus the same declaration-time mismatch
+	// protection WithCodec already has via resolveCodec's type assertion
+	// (WR-04). nil unless a WithSelfStatus option was applied.
+	selfStatusInType reflect.Type
+	owner            string
 }
 
 // FlowOption configures a FlowOf at construction time via New.
@@ -71,6 +78,9 @@ func New[In any](name string, opts ...FlowOption) *FlowOf[In] {
 	cfg := &flowConfig{}
 	for _, opt := range opts {
 		opt(cfg)
+	}
+	if cfg.selfStatus != nil && cfg.selfStatusInType != reflect.TypeFor[In]() {
+		panic(fmt.Errorf("entflow: New[%s](%q): WithSelfStatus supplied a reader declared for input type %s, which does not match", reflect.TypeFor[In](), name, cfg.selfStatusInType))
 	}
 	return &FlowOf[In]{
 		name:             name,
