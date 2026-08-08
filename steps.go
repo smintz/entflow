@@ -3,6 +3,7 @@ package entflow
 import (
 	"context"
 	"fmt"
+	"reflect"
 )
 
 // requireStepName panics with an error value naming constructor when name is
@@ -68,13 +69,11 @@ func dbAdapter[In, TX, Ent any](name, constructor string, fn func(ctx context.Co
 	return func(ctx context.Context, tx any, in any) (any, error) {
 		typedTx, ok := tx.(TX)
 		if !ok {
-			var zeroTX TX
-			return nil, fmt.Errorf("entflow: step %q (%s): tx has type %T, want %T", name, constructor, tx, zeroTX)
+			return nil, fmt.Errorf("entflow: step %q (%s): tx has type %T, want %s", name, constructor, tx, reflect.TypeFor[TX]())
 		}
 		typedIn, ok := in.(In)
 		if !ok {
-			var zeroIn In
-			return nil, fmt.Errorf("entflow: step %q (%s): in has type %T, want %T", name, constructor, in, zeroIn)
+			return nil, fmt.Errorf("entflow: step %q (%s): in has type %T, want %s", name, constructor, in, reflect.TypeFor[In]())
 		}
 		return fn(ctx, typedTx, typedIn)
 	}
@@ -88,13 +87,11 @@ func checkAdapter[In, TX any](name string, fn func(ctx context.Context, tx TX, i
 	return func(ctx context.Context, tx any, in any) (any, error) {
 		typedTx, ok := tx.(TX)
 		if !ok {
-			var zeroTX TX
-			return nil, fmt.Errorf("entflow: step %q (Check): tx has type %T, want %T", name, tx, zeroTX)
+			return nil, fmt.Errorf("entflow: step %q (Check): tx has type %T, want %s", name, tx, reflect.TypeFor[TX]())
 		}
 		typedIn, ok := in.(In)
 		if !ok {
-			var zeroIn In
-			return nil, fmt.Errorf("entflow: step %q (Check): in has type %T, want %T", name, in, zeroIn)
+			return nil, fmt.Errorf("entflow: step %q (Check): in has type %T, want %s", name, in, reflect.TypeFor[In]())
 		}
 		if err := fn(ctx, typedTx, typedIn); err != nil {
 			return nil, err

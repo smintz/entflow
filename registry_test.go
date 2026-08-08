@@ -113,6 +113,23 @@ func TestProvideInterfaceType(t *testing.T) {
 	require.ErrorIs(t, err, entflow.ErrNotProvided)
 }
 
+// TestTryUseNotProvidedNamesInterfaceType proves the ErrNotProvided error
+// names the requested type even when T is instantiated with an interface
+// type — a nil-valued generic zero (var zero T) erases its static type when
+// passed through fmt's %T on a bare interface{} conversion, so this exercises
+// the WR-01 regression: the error must report the interface's own name
+// ("refunder"), not "<nil>".
+func TestTryUseNotProvidedNamesInterfaceType(t *testing.T) {
+	reg := entflow.NewRegistry()
+	ctx := entflow.WithRegistry(context.Background(), reg)
+
+	_, err := entflow.TryUse[refunder](ctx)
+	require.Error(t, err)
+	require.ErrorIs(t, err, entflow.ErrNotProvided)
+	require.Contains(t, err.Error(), "refunder")
+	require.NotContains(t, err.Error(), "<nil>")
+}
+
 func TestRegistryConcurrentAccess(t *testing.T) {
 	reg := entflow.NewRegistry()
 	ctx := entflow.WithRegistry(context.Background(), reg)

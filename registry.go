@@ -73,7 +73,7 @@ func TryUse[T any](ctx context.Context) (T, error) {
 	defer r.mu.RUnlock()
 	v, ok := r.items[reflect.TypeFor[T]()]
 	if !ok {
-		return zero, fmt.Errorf("%w: %T", ErrNotProvided, zero)
+		return zero, fmt.Errorf("%w: %s", ErrNotProvided, reflect.TypeFor[T]())
 	}
 	return v.(T), nil
 }

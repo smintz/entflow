@@ -3,6 +3,7 @@ package entflow
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"runtime/debug"
 	"strings"
 )
@@ -36,13 +37,11 @@ func WithSelfStatus[In, TX any](fn func(ctx context.Context, tx TX, in In) (stri
 		cfg.selfStatus = func(ctx context.Context, tx any, in any) (string, error) {
 			typedTx, ok := tx.(TX)
 			if !ok {
-				var zeroTX TX
-				return "", fmt.Errorf("entflow: WithSelfStatus: tx has type %T, want %T", tx, zeroTX)
+				return "", fmt.Errorf("entflow: WithSelfStatus: tx has type %T, want %s", tx, reflect.TypeFor[TX]())
 			}
 			typedIn, ok := in.(In)
 			if !ok {
-				var zeroIn In
-				return "", fmt.Errorf("entflow: WithSelfStatus: in has type %T, want %T", in, zeroIn)
+				return "", fmt.Errorf("entflow: WithSelfStatus: in has type %T, want %s", in, reflect.TypeFor[In]())
 			}
 			return fn(ctx, typedTx, typedIn)
 		}
