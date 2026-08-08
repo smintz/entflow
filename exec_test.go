@@ -194,9 +194,17 @@ func TestTopoOrderCycleDetected(t *testing.T) {
 }
 
 // TestWhenSelfWasSkipsWhenMismatched proves When(SelfWas(...)) skips the
-// step, and records no result for it, when the snapshot doesn't match.
+// step, and records no result for it, when the snapshot doesn't match. The
+// assertion reads Result[int] from a ctx captured live from inside a later
+// step's closure — the same ctx Exec's internal result store was derived
+// onto — rather than a freshly-constructed context.Background(), which would
+// carry no result store regardless of what Exec did and so would pass
+// vacuously even if the "skipped step records no result" invariant were
+// broken (WR-06; see TestResultAccessibleAcrossSteps for the same
+// live-ctx-capture pattern used correctly for the cross-step-read case).
 func TestWhenSelfWasSkipsWhenMismatched(t *testing.T) {
 	var ran bool
+	var observerCtx context.Context
 	f := entflow.New[int]("Guarded", entflow.WithSelfStatus(func(ctx context.Context, tx *txCounter, in int) (string, error) {
 		return "draft", nil
 	}))
@@ -204,13 +212,19 @@ func TestWhenSelfWasSkipsWhenMismatched(t *testing.T) {
 		ran = true
 		return in, nil
 	}, entflow.When(entflow.SelfWas("paid")))
+	entflow.UpdateSelf(f, "observer", func(ctx context.Context, tx *txCounter, in int) (int, error) {
+		observerCtx = ctx
+		return in, nil
+	}, entflow.After("guarded"))
 
 	err := f.Exec(context.Background(), &txCounter{}, 1)
 	require.NoError(t, err)
 	require.False(t, ran)
 
-	_, resultErr := entflow.Result[int](context.Background(), "guarded")
+	require.NotNil(t, observerCtx, "observer step must have run and captured Exec's live ctx")
+	_, resultErr := entflow.Result[int](observerCtx, "guarded")
 	require.Error(t, resultErr, "a skipped step must record no result")
+	require.ErrorIs(t, resultErr, entflow.ErrUnknownStep)
 }
 
 // TestWhenSelfWasRunsWhenMatched is TestWhenSelfWasSkipsWhenMismatched's
