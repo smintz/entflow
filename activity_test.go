@@ -106,6 +106,22 @@ func TestRetryOnDBStepPanics(t *testing.T) {
 	})
 }
 
+// TestRetryRevalidatesBypassedPolicy proves Retry re-validates a RetryPolicy
+// constructed directly (bypassing Backoff's own validation, possible because
+// every RetryPolicy field is exported) rather than trusting whatever it is
+// handed (WR-03).
+func TestRetryRevalidatesBypassedPolicy(t *testing.T) {
+	f := New[string]("Refund")
+	requirePanicsWithError(t, func() {
+		Activity(f, "refund",
+			func(ctx context.Context, self string, att Attempt) (JSON[int], error) {
+				return NewJSON(0), nil
+			},
+			Retry(RetryPolicy{MaxAttempts: 0, Initial: time.Hour, Max: time.Second}),
+		)
+	})
+}
+
 // TestRetryOnEmitStepPanics is TestRetryOnDBStepPanics's Emit-shaped twin:
 // Retry's doc comment states retry policies apply to Activities only, so an
 // Emit step (which never mutates the database and is not an Activity either)
