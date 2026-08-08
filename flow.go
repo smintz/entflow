@@ -9,11 +9,6 @@
 // mirrors how ent's own generated ent/runtime package discovers Hooks().
 package entflow
 
-import (
-	"context"
-	"fmt"
-)
-
 // Flow is the schema-facing interface returned from a schema's Flows()
 // method: func (Order) Flows() []entflow.Flow. It is deliberately minimal in
 // Phase 1 — additional methods (Meta()) are added by a later plan once the
@@ -38,7 +33,8 @@ type FlowOption func(*flowConfig)
 // type parameters (the transaction type, the entity type, an Activity's
 // output type) cannot be methods on FlowOf — Go methods cannot declare their
 // own type parameters — so they are package-level generic functions taking
-// *FlowOf[In] as their first argument instead (see UpdateSelf below).
+// *FlowOf[In] as their first argument instead (see steps.go's UpdateSelf and
+// its six siblings).
 type FlowOf[In any] struct {
 	name  string
 	steps []*step
@@ -81,51 +77,4 @@ func FlowsOf(schema any) []Flow {
 		return nil
 	}
 	return fs.Flows()
-}
-
-// UpdateSelf declares a DB step that mutates the entity owning the flow. Its
-// closure fn receives the caller-supplied transaction (typed as TX, inferred
-// from the closure literal — never named explicitly at the call site) and
-// the flow's input, and returns the updated entity.
-//
-// UpdateSelf cannot be a method on *FlowOf[In]: TX and Ent are type
-// parameters independent of In, and Go methods cannot declare their own type
-// parameters (VERIFIED during Phase 1 research, Go 1.25.1). Every DB-step
-// constructor in this package therefore follows this same package-level
-// generic function shape, taking *FlowOf[In] as its first argument and
-// returning it, so sequential declaration still reads naturally:
-//
-//	f := entflow.New[*CancelOrderRequest]("CancelOrder")
-//	entflow.UpdateSelf(f, "cancel", func(ctx context.Context, tx *ent.Tx, in *CancelOrderRequest) (*ent.Order, error) {
-//		return tx.Order.UpdateOneID(in.OrderID).SetStatus(order.StatusCancelled).Save(ctx)
-//	}, entflow.Transition("cancelled"))
-func UpdateSelf[In, TX, Ent any](
-	f *FlowOf[In],
-	name string,
-	fn func(ctx context.Context, tx TX, in In) (Ent, error),
-	opts ...StepOption,
-) *FlowOf[In] {
-	s := &step{
-		name:        name,
-		kind:        KindDB,
-		constructor: "UpdateSelf",
-	}
-	for _, opt := range opts {
-		opt(s)
-	}
-	s.run = func(ctx context.Context, tx any, in any) (any, error) {
-		typedTx, ok := tx.(TX)
-		if !ok {
-			var zeroTX TX
-			return nil, fmt.Errorf("entflow: step %q (UpdateSelf): tx has type %T, want %T", name, tx, zeroTX)
-		}
-		typedIn, ok := in.(In)
-		if !ok {
-			var zeroIn In
-			return nil, fmt.Errorf("entflow: step %q (UpdateSelf): in has type %T, want %T", name, in, zeroIn)
-		}
-		return fn(ctx, typedTx, typedIn)
-	}
-	f.steps = append(f.steps, s)
-	return f
 }

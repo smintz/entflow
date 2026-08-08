@@ -43,14 +43,15 @@ type step struct {
 }
 
 // StepOption configures a step at declaration time. The set of options ships
-// incrementally across Phase 1's plans; this plan adds only Transition, the
-// single option the fixture flow needs.
+// incrementally across Phase 1's plans.
 type StepOption func(*step)
 
 // Transition declares the status value this step's mutation moves the owning
 // entity to. It is claim-only in Phase 1 (SM-01/D-14) — the enforcing hook and
 // the bidirectional cross-validator against a Transitions annotation arrive
-// in Phase 6.
+// in Phase 6. Declaring Transition on a Query or Check step panics at
+// declaration time (steps.go's addDBStep) — a read-only step cannot legally
+// claim a status transition.
 func Transition(to string) StepOption {
 	return func(s *step) {
 		s.transition = to
