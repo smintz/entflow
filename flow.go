@@ -23,11 +23,12 @@ type Flow interface {
 	Name() string
 }
 
-// flowConfig holds construction-time options for New. It is empty in this
-// plan — it exists so a later plan can add WithCodec (D-17) without altering
-// New's published signature, which is a one-way contract every flow
-// declaration calls.
-type flowConfig struct{}
+// flowConfig holds construction-time options for New. codec is stored as an
+// untyped any because flowConfig itself is not generic — New[In] resolves it
+// back to Codec[In] via resolveCodec (codec.go).
+type flowConfig struct {
+	codec any
+}
 
 // FlowOption configures a FlowOf at construction time via New.
 type FlowOption func(*flowConfig)
@@ -41,17 +42,24 @@ type FlowOption func(*flowConfig)
 type FlowOf[In any] struct {
 	name  string
 	steps []*step
+	codec Codec[In]
 }
 
-// New constructs a flow builder named name, typed to input In. opts is
-// reserved for future construction-time configuration (WithCodec in a later
-// plan); it carries no behavior in this plan.
+// New constructs a flow builder named name, typed to input In. With no
+// options, In is (de)serialized via the default JSONCodec[In]; WithCodec
+// overrides that resolution without In having to implement anything (D-17).
 func New[In any](name string, opts ...FlowOption) *FlowOf[In] {
 	cfg := &flowConfig{}
 	for _, opt := range opts {
 		opt(cfg)
 	}
-	return &FlowOf[In]{name: name}
+	return &FlowOf[In]{name: name, codec: resolveCodec[In](cfg)}
+}
+
+// codecOf returns f's resolved codec. Unexported: the executor (this
+// package) and Plan 04's metadata path are its only Phase-1 consumers.
+func (f *FlowOf[In]) codecOf() Codec[In] {
+	return f.codec
 }
 
 // Name returns the flow's declared name, satisfying the Flow interface.
