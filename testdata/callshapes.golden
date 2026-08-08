@@ -1,0 +1,17 @@
+# testdata/callshapes.golden
+#
+# Phase 5's AST parser is written against this file (D-20): a change here is
+# a change to the contract Phase 5 must AST-parse. Record one line per
+# constructor invocation, in declaration order, naming the constructor, its
+# literal string arguments, a fixed placeholder token where the closure
+# argument sits, and the option constructors with their literal arguments.
+#
+# Documented finding (01-RESEARCH.md, "schemast's read surface"): the
+# generics-forced API shape — package-level function calls rather than a
+# fluent dot-chain — is, incidentally, the EASIER shape for go/ast to parse:
+# walking a sequence of top-level *ast.CallExpr statements is more robust
+# than descending an arbitrarily deep *ast.SelectorExpr chain.
+New("CancelOrder", WithOwner("Order"))
+UpdateSelf("cancel", <CLOSURE>, Transition("cancelled"))
+Activity("refund", <CLOSURE>, When(SelfWas("paid")), Retry(Backoff(5, 1s, 1m0s)))
+Emit("order.cancelled", After("cancel"))
