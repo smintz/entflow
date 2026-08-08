@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: runtime-core
 status: executing
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-08-08T11:36:46.432Z"
+stopped_at: Completed 01-03-PLAN.md
+last_updated: "2026-08-08T12:01:53.935Z"
 last_activity: 2026-08-08
 last_activity_desc: ROADMAP.md and STATE.md created; REQUIREMENTS.md traceability populated (56/56 mapped)
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 4
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-08)
 ## Current Position
 
 Phase: 01 (runtime-core) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-08-08 — Phase 01 execution started
 
-Progress: [█████░░░░░] 50%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Progress: [█████░░░░░] 50%
 |------|----------|-------|-------|
 | Phase 01 P01 | 12min | 2 tasks | 30 files |
 | Phase 01 P02 | 7min | 3 tasks | 8 files |
+| Phase 01 P03 | 34min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Task 1 auto-selected A1-N1: UpdateSelf(f, name, closure, opts...) with closure third, variadic StepOption last; Flow stays the schema-facing interface name, generic builder is FlowOf[In].
 - [Phase ?]: Added a genuine no-op passthrough Hook to the fixture Order schema to force ent's codegen to route schema-stitching through the separate ent/runtime package, breaking a real import cycle between schema and ent that Phase 1 research had assumed would not occur.
 - [Phase ?]: Plan 01-02: codec_test.go and result_test.go use internal package entflow (not entflow_test) to exercise unexported seams (flowConfig, codecOf, withResults/putResult) that Plan 03's executor also needs.
+- [Phase ?]: Plan 01-03: Check's closure returns only an error; its adapter records a nil result so the result-recording path stays uniform across all seven DB-step constructors.
+- [Phase ?]: Plan 01-03: WithSelfStatus is an explicit declared FlowOption (mirroring WithCodec's type-erasure pattern), never inferred from a flow's *Self steps, per the 'codegen must never infer facts by inspecting closure bodies' invariant.
+- [Phase ?]: Plan 01-03: Task 2's fixture and behavior spec required a minimal slice of Task 3's stepoptions.go (Condition/SelfWas/When/After) plus a durable-run refusal check pulled forward into exec.go, to keep every task's commit independently buildable and green (Rule 3 deviation).
 
 ### Pending Todos
 
@@ -100,6 +104,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-08T11:36:46.417Z
-Stopped at: Completed 01-02-PLAN.md
+Last session: 2026-08-08T12:01:53.920Z
+Stopped at: Completed 01-03-PLAN.md
 Resume file: None
