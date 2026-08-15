@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: Durability
 status: executing
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-08-15T12:32:41.001Z"
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-08-15T12:57:24.914Z"
 last_activity: 2026-08-15
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 12
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-08)
 ## Current Position
 
 Phase: 02 (Durability) — EXECUTING
-Plan: 4 of 8
+Plan: 5 of 8
 Status: Ready to execute
 Last activity: 2026-08-15 — Phase 02 execution resumed (wave continue)
 
-Progress: [██████░░░░] 58%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Progress: [██████░░░░] 58%
 | Phase 02-durability P01 | 18min | 2 tasks | 29 files |
 | Phase 02 P02 | 55min | 3 tasks | 15 files |
 | Phase 02-durability P03 | 30min | 3 tasks | 9 files |
+| Phase 02-durability P04 | 22min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,9 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 02-03]: D-38 ratified — one table-driven conformance suite proves no-double-claim and rolled-back-claim-stays-claimable on Postgres and SQLite for real (internal/testdata/pgtest), MySQL an explicit named skip, not a silently absent row.
 - [Phase ?]: [Phase 02-03]: SQLite concurrency testing must use a file-backed (not shared-cache in-memory) client with both _txlock=immediate and _busy_timeout — shared-cache mode's SQLITE_LOCKED error path is not covered by modernc.org/sqlite's busy-handler retry the way ordinary file-lock SQLITE_BUSY is.
 - [Phase ?]: [Phase 02-03]: Worker.Run is now a pool of Options.Concurrency independent claim goroutines (D-31), each with its own claimOnceRecovered recover boundary separate from runStep's per-closure recover — a bug in worker bookkeeping itself can no longer crash the whole process.
+- [Phase ?]: [Phase 02-04]: D-40 ratified as a deliberate behavior change — Result[T] now round-trips every path through JSON (map[string]json.RawMessage), including a single uninterrupted worker pass; TestResultTypedHit moved from require.Same to require.Equal+require.NotSame.
+- [Phase ?]: [Phase 02-04]: Self[T]/WithSelfLoader added as the third WithSelfStatus/WithOwnerRef erasure instance (D-41) — a live per-claim re-read via Runner.LoadSelf/StepCall.Self, deliberately asymmetric with Result[T] (inert) and a SelfWas condition (entry snapshot, D-10/D-42).
+- [Phase ?]: [Phase 02-04]: A step-closure error is now always a claimed=true outcome from ClaimOnce once RunStore.Fail's guard matches (retry-scheduled or failed:<step>) — only a guard miss or write error surfaces as a Go error; classifyRetryable (worker/retry.go) uses a locally-declared sqlStater interface plus driver.ErrBadConn plus Options.RetryableError, importing no database driver.
 
 ### Pending Todos
 
@@ -122,6 +126,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-15T12:32:40.982Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-08-15T12:57:24.897Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None
