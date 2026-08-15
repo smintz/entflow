@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"sync"
 	"time"
 )
 
@@ -19,37 +18,59 @@ import (
 // in-memory structure here is keyed by run ID (see "The worker is a pool,
 // not a singleton" in docs/dialects.md).
 //
-// Run returns cleanly when ctx is cancelled: every goroutine stops starting
-// new claim iterations once it observes cancellation, and Run waits for
-// every in-flight iteration to finish before returning. Full drain
-// semantics (D-49: bounding that wait, then cancelling in-flight step
-// contexts) land in this plan's Task 2 — this keeps the ticker/jitter
-// behavior this task adds isolated from Shutdown's own file changes.
+// Run derives its own cancellable work context from ctx (workCtx below) —
+// the context every claim transaction actually runs under — so a later
+// Shutdown call can cancel in-flight claims independently of ctx itself
+// (D-49's drain-then-cancel deadline). Cancelling ctx directly propagates
+// into workCtx immediately, with no drain window at all: that is exactly
+// what "Run returns cleanly when its own context is cancelled, taking the
+// same path as Shutdown with a zero drain window" means literally, not just
+// by convention — there is no separate code path for it.
+//
+// Run always returns nil: a run cancelled by ctx, or drained and cancelled
+// by Shutdown, both leave every in-flight claim's transaction rolled back
+// (D-30's ordinary crash-shaped outcome) rather than surfacing as a Run
+// error. Shutdown, not Run's return value, is where a caller learns whether
+// the drain deadline was exceeded.
 func (w *Worker) Run(ctx context.Context) error {
 	n := w.opts.Concurrency
 	if n <= 0 {
 		n = 1
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(n)
+	workCtx, cancel := context.WithCancel(ctx)
+
+	w.mu.Lock()
+	w.started = true
+	w.cancelWork = cancel
+	w.mu.Unlock()
+
+	w.pollWG.Add(n)
 	for i := 0; i < n; i++ {
 		go func() {
-			defer wg.Done()
-			w.pollLoop(ctx)
+			defer w.pollWG.Done()
+			w.pollLoop(workCtx)
 		}()
 	}
-	wg.Wait()
+	w.pollWG.Wait()
+	cancel()
 	return nil
 }
 
 // pollLoop is the body one claim goroutine runs: on every tick (and on
 // every Engine.Notify wakeup) it drains claimOnceRecovered until nothing
 // more is claimable, then waits out a jittered PollInterval. Returns when
-// ctx is cancelled. Every goroutine started by Run runs its own, entirely
-// independent copy of this loop against its own transactions — there is no
-// shared mutable state between them beyond w's own read-only fields and the
-// database itself.
+// ctx is cancelled or when w.stopCh is closed (Shutdown's "stop claiming"
+// signal — deliberately a SEPARATE channel from ctx, so Shutdown can stop
+// new claims from starting while letting an in-flight claim's transaction,
+// still running under ctx, finish committing during the drain window).
+// stopCh is what makes this select wake up PROMPTLY on Shutdown even mid-wait;
+// claimOnceRecovered's own beginClaim gate (worker.go) is what makes the
+// inner claiming loop below stop starting new claims, so no separate stopCh
+// check is needed there. Every goroutine started by Run runs its own,
+// entirely independent copy of this loop against its own transactions —
+// there is no shared mutable state between them beyond w's own read-only
+// fields and the database itself.
 //
 // A goroutine that just claimed a run attempts its next claim immediately,
 // without waiting out a poll interval first: work found means more work may
@@ -60,6 +81,8 @@ func (w *Worker) pollLoop(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
+			return
+		case <-w.stopCh:
 			return
 		default:
 		}
@@ -85,6 +108,8 @@ func (w *Worker) pollLoop(ctx context.Context) {
 		wait := jitteredInterval(w.opts.PollInterval, w.opts.Jitter)
 		select {
 		case <-ctx.Done():
+			return
+		case <-w.stopCh:
 			return
 		case <-time.After(wait):
 		case <-w.eng.Nudges():
@@ -113,8 +138,21 @@ func (w *Worker) pollLoop(ctx context.Context) {
 // solely to stop that panic from crashing the whole worker process (a
 // long-running worker that dies on one bad step is not durable), not to
 // redo the rollback.
+//
+// w.beginClaim (worker.go) gates entry: once Shutdown has set w.stopping,
+// beginClaim returns false and this returns (false, nil) without ever
+// calling ClaimOnce — which is also what makes pollLoop's own inner
+// claiming loop above stop on its own, with no separate stopCh check
+// needed there. A successful beginClaim is always paired with exactly one
+// w.endClaim, via defer, so Shutdown's drain wait (a condition variable, not
+// a sync.WaitGroup — see worker.go's doc comment on why) always eventually
+// observes zero in-flight claims.
 func (w *Worker) claimOnceRecovered(ctx context.Context) (claimed bool, err error) {
+	if !w.beginClaim() {
+		return false, nil
+	}
 	defer func() {
+		w.endClaim()
 		if r := recover(); r != nil {
 			err = fmt.Errorf("entflow/worker: recovered panic in claim-execute-advance: %v", r)
 		}
