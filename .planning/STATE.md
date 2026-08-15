@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: Durability
 status: executing
-stopped_at: Completed 02-04-PLAN.md
-last_updated: "2026-08-15T12:57:24.914Z"
+stopped_at: Completed 02-05-PLAN.md
+last_updated: "2026-08-15T13:26:38.243Z"
 last_activity: 2026-08-15
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 12
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-08)
 ## Current Position
 
 Phase: 02 (Durability) — EXECUTING
-Plan: 5 of 8
+Plan: 6 of 8
 Status: Ready to execute
 Last activity: 2026-08-15 — Phase 02 execution resumed (wave continue)
 
-Progress: [███████░░░] 67%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -66,6 +66,7 @@ Progress: [███████░░░] 67%
 | Phase 02 P02 | 55min | 3 tasks | 15 files |
 | Phase 02-durability P03 | 30min | 3 tasks | 9 files |
 | Phase 02-durability P04 | 22min | 3 tasks | 13 files |
+| Phase 02-durability P05 | 50min | 3 tasks | 25 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,10 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 02-04]: D-40 ratified as a deliberate behavior change — Result[T] now round-trips every path through JSON (map[string]json.RawMessage), including a single uninterrupted worker pass; TestResultTypedHit moved from require.Same to require.Equal+require.NotSame.
 - [Phase ?]: [Phase 02-04]: Self[T]/WithSelfLoader added as the third WithSelfStatus/WithOwnerRef erasure instance (D-41) — a live per-claim re-read via Runner.LoadSelf/StepCall.Self, deliberately asymmetric with Result[T] (inert) and a SelfWas condition (entry snapshot, D-10/D-42).
 - [Phase ?]: [Phase 02-04]: A step-closure error is now always a claimed=true outcome from ClaimOnce once RunStore.Fail's guard matches (retry-scheduled or failed:<step>) — only a guard miss or write error surfaces as a Go error; classifyRetryable (worker/retry.go) uses a locally-declared sqlStater interface plus driver.ErrBadConn plus Options.RetryableError, importing no database driver.
+- [Phase ?]: [Phase 02-05]: D-44's compile-fail fixture proves the marker's context-key type is unforgeable even intra-module (unexported ctxKey, real isolated go build failure), not Go's cross-module internal-package rule — internal/testdata/compilefail is itself inside the entflow module, so that import legally compiles; the AST scan (TestWorkflowMarkerHasExactlyOneSetter) is what confines the setter to worker/dbstep.go.
+- [Phase ?]: [Phase 02-05]: CancelOrderFlowRun's Policy() mutation side gained a universal admin-allow rule and a Create-ownership check beyond the plan's literal marker+cancel-guard description — required so an admin viewer isn't denied on mutation shapes outside Create/cancel-set-Update, and so entflow.Start has a legitimate non-worker allow path at all.
+- [Phase ?]: [Phase 02-05]: worker/dbstep.go applies Options.Context before wfmarker.Set (D-45) — the application hook can never observe or forge the marker; a worker with no hook configured is honestly denied by a privacy-governed run entity, not silently granted access.
+- [Phase ?]: [Phase 02-05]: entflow.Engine.Cancel is a method, not a package-level generic function like Start — it needs no second type parameter, so Start's erasure gymnastics don't apply; it runs under the caller's own context/viewer, never the worker's.
 
 ### Pending Todos
 
@@ -126,6 +131,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-15T12:57:24.897Z
-Stopped at: Completed 02-04-PLAN.md
+Last session: 2026-08-15T13:26:38.224Z
+Stopped at: Completed 02-05-PLAN.md
 Resume file: None

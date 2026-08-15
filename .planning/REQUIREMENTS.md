@@ -54,10 +54,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Operations and Observability
 
-- [ ] **OPS-01**: Operator can query runs as ordinary ent entities (e.g. "failed refunds this week", "this order's runs") with no bespoke code
-- [ ] **OPS-02**: Who may view, cancel, or retry a run is governed by a `Policy()` on the run entity
+- [x] **OPS-01**: Operator can query runs as ordinary ent entities (e.g. "failed refunds this week", "this order's runs") with no bespoke code
+- [x] **OPS-02**: Who may view, cancel, or retry a run is governed by a `Policy()` on the run entity
 - [ ] **OPS-03**: Operator can manually retry a failed run as a permitted state transition
-- [ ] **OPS-04**: Operator can cancel an in-flight run
+- [x] **OPS-04**: Operator can cancel an in-flight run
 - [ ] **OPS-05**: Each run emits one span with a child span per step named `workflow.<Flow>.<step>`, carrying attempt count, error, and state as attributes
 
 ### State Machine Cross-Validation
@@ -160,9 +160,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DUR-08 | Phase 2 | Complete |
 | DUR-09 | Phase 2 | Pending |
 | DUR-10 | Phase 2 | Pending |
-| OPS-01 | Phase 2 | Pending |
-| OPS-02 | Phase 2 | Pending |
-| OPS-04 | Phase 2 | Pending |
+| OPS-01 | Phase 2 | Complete |
+| OPS-02 | Phase 2 | Complete |
+| OPS-04 | Phase 2 | Complete |
 | OPS-05 | Phase 2 | Pending |
 | TEST-01 | Phase 2 | Pending |
 | TEST-02 | Phase 2 | Pending |

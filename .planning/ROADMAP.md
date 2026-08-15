@@ -80,7 +80,7 @@ Plans:
   4. An operator can query runs as ordinary ent entities (e.g. "this order's runs") with no bespoke code, governed by a `Policy()` on the run entity, can cancel an in-flight run, and can see each run emit one span with a child span per step named `workflow.<Flow>.<step>` carrying attempt count, error, and state as attributes.
   5. The worker shuts down gracefully without abandoning a claimed run mid-step, and can run either in-process alongside the API server or as a dedicated worker binary.
 
-**Plans**: 4/8 plans executed
+**Plans**: 5/8 plans executed
 
 Plans:
 **Wave 1**
@@ -98,7 +98,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3)*
 
-- [ ] 02-05-PLAN.md — Runs as an ops surface: the workflow marker, `Policy()`, cancellation, and ordinary ent queries
+- [x] 02-05-PLAN.md — Runs as an ops surface: the workflow marker, `Policy()`, cancellation, and ordinary ent queries
 
 **Wave 5** *(blocked on Wave 4, run in parallel)*
 
@@ -178,7 +178,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Runtime Core | 4/4 | Complete    | 2026-08-08 |
-| 2. Durability | 4/8 | In Progress|  |
+| 2. Durability | 5/8 | In Progress|  |
 | 3. Activities | 0/TBD | Not started | - |
 | 4. Outbox & Flow Chaining | 0/TBD | Not started | - |
 | 5. Codegen — Entity Injection Spike | 0/TBD | Not started | - |
