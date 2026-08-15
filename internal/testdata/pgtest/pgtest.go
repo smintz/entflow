@@ -121,8 +121,23 @@ func Start(t *testing.T) *ent.Client {
 // — identical here.
 func StartN(t *testing.T, n int) []*ent.Client {
 	t.Helper()
+	clients, _ := StartNWithDSN(t, n)
+	return clients
+}
+
+// StartNWithDSN behaves exactly like StartN but additionally returns the
+// connection string (including the isolated schema's search_path parameter)
+// those n clients were opened against. Added for plan 02-07's cross-process
+// topology test (topology_test.go): a real OS subprocess — the
+// internal/testdata/crashworker binary — cannot share this test's in-memory
+// *sql.DB connection pool, so it needs the DSN itself, passed through an
+// environment variable, to reach the SAME isolated schema StartN's clients
+// use. Every existing StartN/Start caller is unaffected: this function's
+// body is what StartN now delegates to, discarding the DSN.
+func StartNWithDSN(t *testing.T, n int) ([]*ent.Client, string) {
+	t.Helper()
 	if n < 1 {
-		t.Fatalf("pgtest: StartN: n must be at least 1, got %d", n)
+		t.Fatalf("pgtest: StartNWithDSN: n must be at least 1, got %d", n)
 	}
 
 	startContainer(t)
@@ -175,7 +190,7 @@ func StartN(t *testing.T, n int) []*ent.Client {
 		clients[i] = client
 	}
 
-	return clients
+	return clients, testDSN
 }
 
 // freshSchemaName derives a unique, valid Postgres identifier from t's name
