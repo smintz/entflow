@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: Durability
 status: executing
-stopped_at: Phase 2 context gathered
-last_updated: "2026-08-15T11:19:01.304Z"
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-08-15T11:43:45.209Z"
 last_activity: 2026-08-15
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 12
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-08)
 ## Current Position
 
 Phase: 02 (Durability) — EXECUTING
-Plan: 1 of 8
-Status: Executing Phase 02
+Plan: 2 of 8
+Status: Ready to execute
 Last activity: 2026-08-15 — Phase 02 execution resumed (wave continue)
 
-Progress: [██████████] 100%
+Progress: [████░░░░░░] 42%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [██████████] 100%
 | Phase 01 P02 | 7min | 3 tasks | 8 files |
 | Phase 01 P03 | 34min | 3 tasks | 13 files |
 | Phase 01 P04 | 28min | 3 tasks | 13 files |
+| Phase 02-durability P01 | 18min | 2 tasks | 29 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Plan 01-04: Meta() deep-copies every slice (Steps, DependsOn, Conditions) so a caller mutating a returned FlowMeta can never reach the live flow declaration (D-19 immutable snapshot).
 - [Phase ?]: Plan 01-04: META-02's dependency allowlist is derived by running go list -deps against entflow's own entgo.io/ent imports at test time, never hand-curated, so the gate stays meaningful across ent version bumps.
 - [Phase ?]: Plan 01-04: OutType left empty in Phase 1 (documented) — no step kind declares a flow-level output type yet; testdata/callshapes.golden pins the builder-chain call shapes Phase 5's AST parser must handle.
+- [Phase ?]: [Phase 02-01]: D-23 + D-27 ratified exactly as CONTEXT.md specifies (auto-selected under auto mode, checkpoint gate=blocking not blocking-human) — RunMixin's column set and the colon-bearing failed:<step> enum are now the persisted contract Phase 5 codegen must reproduce.
+- [Phase ?]: [Phase 02-01]: Closed RESEARCH.md Assumption A1 — sql/execquery's ExecContext/QueryContext land on *config/*txDriver (promoted onto *Client/*Tx via embedding) on the pinned ent v0.14.6 tag, not directly on *Client/*Tx as master-branch research suggested; signatures match exactly, no adaptation needed in later claim code.
+- [Phase ?]: [Phase 02-01]: Phase 2 ships no MySQL-specific partial-index variant (RESEARCH.md open question 2) — the D-34 index is documented Postgres/SQLite-only in run.go.
 
 ### Pending Todos
 
@@ -109,6 +113,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-15T08:38:54.896Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-durability/02-CONTEXT.md
+Last session: 2026-08-15T11:43:45.192Z
+Stopped at: Completed 02-01-PLAN.md
+Resume file: None
