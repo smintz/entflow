@@ -56,9 +56,13 @@ func (sqliteStrategy) Claim(ctx context.Context, q entflow.RawQuerier, t entflow
 
 // SkipLockedStrategy returns the ClaimStrategy for dialects that support
 // SELECT ... FOR UPDATE SKIP LOCKED (Postgres and MySQL, D-35/D-36) using
-// Postgres's own placeholder and clock-function syntax. Plan 02-03 hardens
-// and certifies this against a real Postgres; StrategyForDialect is the
-// entry point that also selects MySQL's placeholder syntax.
+// Postgres's own placeholder and clock-function syntax. Certified against a
+// real Postgres by worker/claim_test.go (plan 02-03, via
+// internal/testdata/pgtest) and by worker/conformance_test.go's D-38 suite;
+// StrategyForDialect is the entry point that also selects MySQL's
+// placeholder syntax. MySQL shares this exact statement (D-36) but is
+// compatible/uncertified, not certified by the release gate (D-35) — no
+// MySQL container or driver runs against it in this phase.
 func SkipLockedStrategy() ClaimStrategy {
 	return skipLockedStrategy{dialect: "postgres"}
 }
