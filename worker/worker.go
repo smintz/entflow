@@ -3,7 +3,9 @@ package worker
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/smintz/entflow"
@@ -12,52 +14,24 @@ import (
 // errNilEngine is returned by New when eng is nil.
 var errNilEngine = errors.New("entflow/worker: eng must not be nil")
 
-// Options configures a Worker at construction time. See worker.New.
-//
-// The worker is a pool, not a singleton: the unit of ownership is the run
-// claim, not the worker. A run belongs to whichever transaction currently
-// holds its row lock, for the duration of exactly one step, and to nothing
-// else in between — no code path may key behavior on worker identity. See
-// docs/dialects.md.
-type Options struct {
-	// Dialect names the database dialect the worker's run stores are
-	// backed by — "postgres", "mysql", or "sqlite". Resolved into a
-	// ClaimStrategy at construction (D-37), never lazily at first claim.
-	Dialect string
-	// Concurrency is the number of interchangeable claim goroutines this
-	// worker pool runs. Forced to at most 1 on SQLite (D-36) — New refuses
-	// a higher value rather than silently clamping it.
-	Concurrency int
-	// PollInterval is the base interval between poll ticks (D-33).
-	PollInterval time.Duration
-	// Jitter is the fractional jitter applied to PollInterval, in [0,1).
-	Jitter float64
-	// ClaimStrategy overrides the strategy StrategyForDialect(Dialect)
-	// would otherwise select. Nil selects the dialect's ratified default.
-	ClaimStrategy ClaimStrategy
-}
-
-// withDefaults fills unset fields with this tracer's minimal defaults.
-// Task 2 (worker/options.go) replaces this with the full Default* constant
-// set (PollInterval, Jitter, Concurrency, DrainTimeout, MaxAttempts) once
-// Options gains its remaining fields.
-func (o Options) withDefaults() Options {
-	if o.PollInterval <= 0 {
-		o.PollInterval = time.Second
-	}
-	if o.Jitter <= 0 {
-		o.Jitter = 0.25
-	}
-	if o.Concurrency <= 0 {
-		o.Concurrency = 1
-	}
-	return o
-}
+// ErrSQLiteConcurrency is returned by New when Options.Dialect names SQLite
+// and Options.Concurrency is greater than 1 — a refusal, never a silent
+// clamp to one (D-36). SQLite has no row-level locking; a second concurrent
+// claim goroutine would not get SKIP LOCKED's mutual exclusion from
+// SQLiteStrategy, which relies entirely on the whole-database write
+// serialization a single claiming goroutine gets for free.
+var ErrSQLiteConcurrency = errors.New("entflow/worker: sqlite supports at most one claim goroutine")
 
 // Worker claims and advances durable runs registered on an *entflow.Engine.
 // Both DUR-09 topologies — in-process alongside an API server, or a
 // dedicated worker binary — are the same object: go w.Run(ctx) is the whole
 // difference.
+//
+// The worker is a pool, not a singleton: the unit of ownership is the run
+// claim, not the worker. A run belongs to whichever transaction currently
+// holds its row lock, for the duration of exactly one step, and to nothing
+// else in between — no code path may key behavior on worker identity. See
+// "The worker is a pool, not a singleton" in docs/dialects.md.
 type Worker struct {
 	eng      *entflow.Engine
 	opts     Options
@@ -66,7 +40,8 @@ type Worker struct {
 
 // New constructs a Worker, validating eagerly: an unrecognized dialect, or
 // a SQLite dialect with Concurrency above one, is refused here rather than
-// lazily at the first claim (D-37).
+// lazily at the first claim (D-37). Neither refusal makes any database
+// round trip — both are pure checks against opts.
 func New(eng *entflow.Engine, opts Options) (*Worker, error) {
 	if eng == nil {
 		return nil, errNilEngine
@@ -82,7 +57,22 @@ func New(eng *entflow.Engine, opts Options) (*Worker, error) {
 		strategy = s
 	}
 
+	if isSQLiteDialect(opts.Dialect) && opts.Concurrency > 1 {
+		return nil, fmt.Errorf("entflow/worker: dialect %q: concurrency %d: %w (see docs/dialects.md)", opts.Dialect, opts.Concurrency, ErrSQLiteConcurrency)
+	}
+
 	return &Worker{eng: eng, opts: opts, strategy: strategy}, nil
+}
+
+// isSQLiteDialect reports whether dialect names the SQLite entry in the
+// dialect matrix (D-35), under either of its accepted spellings.
+func isSQLiteDialect(dialect string) bool {
+	switch strings.ToLower(dialect) {
+	case "sqlite", "sqlite3":
+		return true
+	default:
+		return false
+	}
 }
 
 // ClaimOnce attempts exactly one claim-execute-advance cycle (D-31: one run
