@@ -32,8 +32,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **DUR-06**: The worker re-claims the run at each step boundary rather than holding a lease across the whole flow
 - [x] **DUR-07**: A run whose steps all succeed reaches `state=done` with the response recorded; a run whose step fails after retries exhaust reaches `failed:<step>` with the error recorded
 - [x] **DUR-08**: Developer gets an explicit, documented dialect support matrix (Postgres first-class; MySQL and SQLite status stated) and a clear startup error rather than silent breakage on a dialect that cannot support the claim query
-- [ ] **DUR-09**: Developer can run the worker in-process alongside the API server or as a dedicated worker binary
-- [ ] **DUR-10**: The worker shuts down gracefully without abandoning a claimed run mid-step
+- [x] **DUR-09**: Developer can run the worker in-process alongside the API server or as a dedicated worker binary
+- [x] **DUR-10**: The worker shuts down gracefully without abandoning a claimed run mid-step
 
 ### Activities
 
@@ -158,8 +158,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DUR-06 | Phase 2 | Complete |
 | DUR-07 | Phase 2 | Complete |
 | DUR-08 | Phase 2 | Complete |
-| DUR-09 | Phase 2 | Pending |
-| DUR-10 | Phase 2 | Pending |
+| DUR-09 | Phase 2 | Complete |
+| DUR-10 | Phase 2 | Complete |
 | OPS-01 | Phase 2 | Complete |
 | OPS-02 | Phase 2 | Complete |
 | OPS-04 | Phase 2 | Complete |

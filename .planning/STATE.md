@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: Durability
 status: executing
-stopped_at: Completed 02-06-PLAN.md
-last_updated: "2026-08-15T13:50:38.434Z"
+stopped_at: Completed 02-07-PLAN.md
+last_updated: "2026-08-15T14:23:53.883Z"
 last_activity: 2026-08-15
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 12
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-08)
 ## Current Position
 
 Phase: 02 (Durability) — EXECUTING
-Plan: 7 of 8
+Plan: 8 of 8
 Status: Ready to execute
 Last activity: 2026-08-15 — Phase 02 execution resumed (wave continue)
 
-Progress: [████████░░] 83%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress: [████████░░] 83%
 | Phase 02-durability P04 | 22min | 3 tasks | 13 files |
 | Phase 02-durability P05 | 50min | 3 tasks | 25 files |
 | Phase 02-durability P06 | 20min | 3 tasks | 11 files |
+| Phase 02-durability P07 | 35min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -110,6 +111,11 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 02-06]: D-58 resolved — a run's root span is started and ended within the single claim that first seeds trace_context, never held open across a claim boundary; later claims restore it as a remote parent for that claim's own child span.
 - [Phase ?]: [Phase 02-06]: D-59 resolved — trace_context stores <traceID>-<spanID>-<flags>; the flags byte is load-bearing (a real SDK's ParentBased sampler silently drops unsampled-flagged restored spans), and Fail (not just Advance) now persists it so a retried first step doesn't fork a new trace.
 - [Phase ?]: [Phase 02-06]: deps_test.go's derived-allowlist technique extended to tracing — TestNoTransportDeps unions the ent-derived and tracing-derived closures; TestTracingDependencyNarrowness fails the graph on any of the five ambient-global modules or the SDK itself.
+- [Phase ?]: [Phase 02-07]: Claim-lifecycle counting (Shutdown's drain wait) is a mutex + sync.Cond, not a sync.WaitGroup — a real -race-detected bug (Add racing Wait once the counter touched zero), fixed by switching primitives.
+- [Phase ?]: [Phase 02-07]: stopCh (channel, wakes selects promptly) and the mu-guarded stopping flag (atomic new-claim gate via beginClaim) are two separate mechanisms, both kept — merging them was the first design tried and is what produced the WaitGroup race.
+- [Phase ?]: [Phase 02-07]: topology_test.go proves cross-process no-duplicated-effect via CancelOrder's own single step rather than a dedicated counter — the effect counter is explicitly plan 02-08 Task 1's own decision (an integer column on Order) to make.
+- [Phase ?]: [Phase 02-07]: internal/testdata/pgtest.StartNWithDSN added beyond the plan's literal file list (Rule 2) — a real OS subprocess needs the raw DSN to reach the same isolated schema; StartN/Start now delegate to it, unaffected for existing callers.
+- [Phase ?]: [Phase 02-07]: Finding required by the plan's output instruction — graceful shutdown needed nothing crash-resume did not already provide; a cancelled context routes an in-flight claim into claimOnce's pre-existing deferred-rollback path (D-30).
 
 ### Pending Todos
 
@@ -136,6 +142,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-15T13:50:38.414Z
-Stopped at: Completed 02-06-PLAN.md
+Last session: 2026-08-15T14:23:53.861Z
+Stopped at: Completed 02-07-PLAN.md
 Resume file: None
