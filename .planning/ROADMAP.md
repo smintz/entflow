@@ -80,7 +80,34 @@ Plans:
   4. An operator can query runs as ordinary ent entities (e.g. "this order's runs") with no bespoke code, governed by a `Policy()` on the run entity, can cancel an in-flight run, and can see each run emit one span with a child span per step named `workflow.<Flow>.<step>` carrying attempt count, error, and state as attributes.
   5. The worker shuts down gracefully without abandoning a claimed run mid-step, and can run either in-process alongside the API server or as a dedicated worker binary.
 
-**Plans**: TBD
+**Plans**: 8 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — Run rows exist: enable `sql/execquery`, ship `entflow.RunMixin`/`WithOwnerRef`, hand-write the `CancelOrderFlowRun` entity
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 02-02-PLAN.md — Tracer: `Start` → claim → one step in one transaction → done, plus the ratified dialect matrix
+
+**Wave 3** *(blocked on Wave 2, run in parallel)*
+
+- [ ] 02-03-PLAN.md — Postgres claiming under concurrency: `FOR UPDATE SKIP LOCKED`, testcontainers, the claim-strategy conformance suite
+- [ ] 02-04-PLAN.md — Persisted results, live `self`, and honest terminal states with DB-step retry
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [ ] 02-05-PLAN.md — Runs as an ops surface: the workflow marker, `Policy()`, cancellation, and ordinary ent queries
+
+**Wave 5** *(blocked on Wave 4, run in parallel)*
+
+- [ ] 02-06-PLAN.md — Observability: per-step spans, trace context across the resume boundary, and the narrowed META-02 amendment
+- [ ] 02-07-PLAN.md — Worker lifecycle: jittered polling, graceful shutdown, and both deployment topologies
+
+**Wave 6** *(blocked on Wave 5)*
+
+- [ ] 02-08-PLAN.md — The release gate: the crash-simulation harness, tier 1 and tier 2
 
 ### Phase 3: Activities
 
@@ -151,7 +178,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Runtime Core | 4/4 | Complete    | 2026-08-08 |
-| 2. Durability | 0/TBD | Not started | - |
+| 2. Durability | 0/8 | Planned | - |
 | 3. Activities | 0/TBD | Not started | - |
 | 4. Outbox & Flow Chaining | 0/TBD | Not started | - |
 | 5. Codegen — Entity Injection Spike | 0/TBD | Not started | - |
