@@ -64,7 +64,7 @@ func conformanceCases() []conformanceCase {
 			strategy:  worker.SkipLockedStrategy,
 		},
 		{
-			dialect: "sqlite",
+			dialect:   "sqlite",
 			mechanism: "whole-database write-lock serialization under a BEGIN IMMEDIATE transaction — the DSN's _txlock=immediate parameter (applies to every transaction on the handle, read-only ones included, per worker.SQLiteStrategy's own doc comment) makes even SQLiteStrategy's bare SELECT participate in that lock; _busy_timeout makes a transaction that loses the race for it block and retry instead of failing immediately with SQLITE_BUSY",
 			newClient: newSQLiteConformanceClient,
 			strategy:  worker.SQLiteStrategy,
