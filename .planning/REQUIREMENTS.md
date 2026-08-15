@@ -28,7 +28,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **DUR-02**: The run row persists state, serialized input, current step, attempt counter, last error, timestamps, and an edge to the owning aggregate row for lineage
 - [x] **DUR-03**: A DB step's effect and the run's progress pointer commit in the same transaction — a step effect never commits without its progress record
 - [x] **DUR-04**: The worker claims runs with `SELECT ... FOR UPDATE SKIP LOCKED`, so multiple workers run concurrently with no coordination service
-- [ ] **DUR-05**: A run interrupted by a worker crash at any step boundary is resumed by any worker and reaches the same terminal state
+- [x] **DUR-05**: A run interrupted by a worker crash at any step boundary is resumed by any worker and reaches the same terminal state
 - [x] **DUR-06**: The worker re-claims the run at each step boundary rather than holding a lease across the whole flow
 - [x] **DUR-07**: A run whose steps all succeed reaches `state=done` with the response recorded; a run whose step fails after retries exhaust reaches `failed:<step>` with the error recorded
 - [x] **DUR-08**: Developer gets an explicit, documented dialect support matrix (Postgres first-class; MySQL and SQLite status stated) and a clear startup error rather than silent breakage on a dialect that cannot support the claim query
@@ -80,8 +80,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Testing and Release Gate
 
-- [ ] **TEST-01**: A crash-simulation harness kills the worker at every step boundary and every Activity beat against a real Postgres, asserting no step effect committed without its progress record, no duplicated Activity effect, and identical terminal state on resume
-- [ ] **TEST-02**: The harness has two explicit tiers — fast in-process logical crash points for matrix coverage, plus real subprocess SIGKILL runs — and the release gate names which tiers must pass
+- [x] **TEST-01**: A crash-simulation harness kills the worker at every step boundary and every Activity beat against a real Postgres, asserting no step effect committed without its progress record, no duplicated Activity effect, and identical terminal state on resume
+- [x] **TEST-02**: The harness has two explicit tiers — fast in-process logical crash points for matrix coverage, plus real subprocess SIGKILL runs — and the release gate names which tiers must pass
 - [ ] **TEST-03**: Property tests cover the transitions cross-validator
 - [ ] **TEST-04**: Golden-file tests cover generated code output
 
@@ -154,7 +154,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DUR-02 | Phase 2 | Complete |
 | DUR-03 | Phase 2 | Complete |
 | DUR-04 | Phase 2 | Complete |
-| DUR-05 | Phase 2 | Pending |
+| DUR-05 | Phase 2 | Complete |
 | DUR-06 | Phase 2 | Complete |
 | DUR-07 | Phase 2 | Complete |
 | DUR-08 | Phase 2 | Complete |
@@ -164,8 +164,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OPS-02 | Phase 2 | Complete |
 | OPS-04 | Phase 2 | Complete |
 | OPS-05 | Phase 2 | Complete |
-| TEST-01 | Phase 2 | Pending |
-| TEST-02 | Phase 2 | Pending |
+| TEST-01 | Phase 2 | Complete |
+| TEST-02 | Phase 2 | Complete |
 | ACT-01 | Phase 3 | Pending |
 | ACT-02 | Phase 3 | Pending |
 | ACT-03 | Phase 3 | Pending |

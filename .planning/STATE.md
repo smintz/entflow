@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 02
 current_phase_name: Durability
-status: executing
-stopped_at: Completed 02-07-PLAN.md
-last_updated: "2026-08-15T14:23:53.883Z"
+status: verifying
+stopped_at: Completed 02-08-PLAN.md
+last_updated: "2026-08-15T14:57:19.295Z"
 last_activity: 2026-08-15
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 12
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-08-08)
 
 Phase: 02 (Durability) — EXECUTING
 Plan: 8 of 8
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-15 — Phase 02 execution resumed (wave continue)
 
-Progress: [█████████░] 92%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -69,6 +69,7 @@ Progress: [█████████░] 92%
 | Phase 02-durability P05 | 50min | 3 tasks | 25 files |
 | Phase 02-durability P06 | 20min | 3 tasks | 11 files |
 | Phase 02-durability P07 | 35min | 3 tasks | 9 files |
+| Phase 02-durability P08 | 130min | 3 tasks | 26 files |
 
 ## Accumulated Context
 
@@ -116,6 +117,10 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 02-07]: topology_test.go proves cross-process no-duplicated-effect via CancelOrder's own single step rather than a dedicated counter — the effect counter is explicitly plan 02-08 Task 1's own decision (an integer column on Order) to make.
 - [Phase ?]: [Phase 02-07]: internal/testdata/pgtest.StartNWithDSN added beyond the plan's literal file list (Rule 2) — a real OS subprocess needs the raw DSN to reach the same isolated schema; StartN/Start now delegate to it, unaffected for existing callers.
 - [Phase ?]: [Phase 02-07]: Finding required by the plan's output instruction — graceful shutdown needed nothing crash-resume did not already provide; a cancelled context routes an in-flight claim into claimOnce's pre-existing deferred-rollback path (D-30).
+- [Phase ?]: [Phase 02-08]: D-55's side-effect counter is an integer column on Order (effect_count), not a dedicated table — atomic with the effect it counts by construction (Claude's Discretion, ratified).
+- [Phase ?]: [Phase 02-08]: entflow.RunMixin became variadic (RunMixin(flows ...Flow)) so two flows can legally share one physical run table's failed:<step> enum — required for ProcessOrder to share CancelOrderFlowRun's table; backward compatible with every existing single-flow call site.
+- [Phase ?]: [Phase 02-08]: worker.Options.Flows is now actually honored by Worker.ClaimOnce — a real, previously-latent bug (the field was declared, documented, but never consulted) that became load-bearing the moment two flows shared one physical table with no per-row flow discriminator.
+- [Phase ?]: [Phase 02-08]: The crash-simulation release gate (D-52 through D-56) is proven, not just documented — 19 tier-1 in-process crash points and 3 tier-2 real-SIGKILL crash points both pass against real Postgres, with mutation-testing verification (a deliberately duplicated effect and a deliberately unpaired progress advance) confirmed to fail the suite before being reverted.
 
 ### Pending Todos
 
@@ -142,6 +147,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-15T14:23:53.861Z
-Stopped at: Completed 02-07-PLAN.md
+Last session: 2026-08-15T14:57:19.276Z
+Stopped at: Completed 02-08-PLAN.md
 Resume file: None
