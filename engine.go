@@ -211,3 +211,62 @@ func Start[In any](ctx context.Context, e *Engine, f *FlowOf[In], in In) (*Run, 
 	e.Notify()
 	return run, nil
 }
+
+// Cancel moves the named flow's run identified by runID from pending or
+// running to cancelled (D-43) — a state transition, never a signal.
+// Cancellation means "no further steps run", NOT "abort the step that is
+// currently mid-flight": every terminal state, including cancelled, is
+// absent from the claim predicate's state list (worker/claim.go), so a
+// cancelled run is structurally unclaimable from the moment this call
+// commits, with no separate stop signal anywhere in the worker. Because the
+// claim transaction holds the run row's lock for the whole duration of the
+// one step it executes (D-30), a Cancel issued while a step is mid-flight
+// blocks on that same lock until the step's transaction commits, then
+// applies — the in-flight step is always allowed to finish.
+//
+// ok reports whether the run was actually moved to cancelled. false with a
+// nil error means the guard (pending or running) did not match — the run
+// was already in a terminal state (cancelled, done, or any failed:<step>)
+// — which makes cancelling an already-cancelled or already-terminal run a
+// safe, idempotent no-op that changes nothing, not an error.
+//
+// Cancel runs entirely under ctx as the caller supplies it — the caller's
+// own context and viewer, never the worker's — so the run entity's own
+// Policy() is exactly what governs who may cancel it (OPS-02).
+func (e *Engine) Cancel(ctx context.Context, flowName string, runID any) (ok bool, err error) {
+	store, exists := e.StoreFor(flowName)
+	if !exists {
+		return false, fmt.Errorf("entflow: Cancel: flow %q: %w", flowName, ErrUnknownFlow)
+	}
+
+	txAny, err := store.BeginTx(ctx)
+	if err != nil {
+		return false, fmt.Errorf("entflow: Cancel: opening transaction: %w", err)
+	}
+	tx, txOK := txAny.(Tx)
+	if !txOK {
+		return false, fmt.Errorf("entflow: Cancel: transaction has type %T, want entflow.Tx", txAny)
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			if rerr := tx.Rollback(); rerr != nil {
+				panic(fmt.Errorf("entflow: Cancel: panic: %v (rollback also failed: %w)", r, rerr))
+			}
+			panic(r)
+		}
+	}()
+
+	cancelled, err := store.Cancel(ctx, txAny, runID)
+	if err != nil {
+		if rerr := tx.Rollback(); rerr != nil {
+			return false, fmt.Errorf("entflow: Cancel: cancelling run %v: %v (rollback also failed: %w)", runID, err, rerr)
+		}
+		return false, fmt.Errorf("entflow: Cancel: cancelling run %v: %w", runID, err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return false, fmt.Errorf("entflow: Cancel: committing: %w", err)
+	}
+	return cancelled, nil
+}

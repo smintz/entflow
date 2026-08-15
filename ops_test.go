@@ -3,6 +3,7 @@ package entflow_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -149,4 +150,52 @@ func TestWorkerAdvancesRunOnlyWithOptionsContext(t *testing.T) {
 	// CancelOrder declares exactly one DB step ("cancel"), so a single
 	// successful claim carries the run straight to done.
 	require.Equal(t, cancelorderflowrun.StateDone, persisted.State)
+}
+
+// TestOpsQueryRunsByOwnerFailureStateAndCreationOrder proves OPS-01 by
+// using it, not by building it: every assertion below reaches
+// CancelOrderFlowRun exclusively through the generated client and the
+// generated predicate/order-option packages — this test's own import list
+// is the evidence that no entflow-specific query helper exists or was
+// needed to answer "every run belonging to one order", "runs stuck in a
+// terminal failure", and "runs in creation order".
+func TestOpsQueryRunsByOwnerFailureStateAndCreationOrder(t *testing.T) {
+	client := entclient.New(t)
+	adminCtx := entflowfixture.WithViewer(context.Background(), entflowfixture.AdminViewer())
+
+	ownerA, err := client.Order.Create().SetStatus(order.StatusPending).Save(adminCtx)
+	require.NoError(t, err)
+	ownerB, err := client.Order.Create().SetStatus(order.StatusPending).Save(adminCtx)
+	require.NoError(t, err)
+
+	first, err := client.CancelOrderFlowRun.Create().
+		SetState(cancelorderflowrun.StatePending).SetInput([]byte(`{}`)).SetOwner(ownerA).Save(adminCtx)
+	require.NoError(t, err)
+	time.Sleep(2 * time.Millisecond) // force a distinguishable created_at ordering
+	second, err := client.CancelOrderFlowRun.Create().
+		SetState(cancelorderflowrun.StateFailedCancel).SetInput([]byte(`{}`)).SetOwner(ownerA).Save(adminCtx)
+	require.NoError(t, err)
+	_, err = client.CancelOrderFlowRun.Create().
+		SetState(cancelorderflowrun.StatePending).SetInput([]byte(`{}`)).SetOwner(ownerB).Save(adminCtx)
+	require.NoError(t, err)
+
+	// Every run belonging to one order, traversed through the owner edge
+	// with the generated predicate package, ordered by creation time.
+	byOwner, err := client.CancelOrderFlowRun.Query().
+		Where(cancelorderflowrun.HasOwnerWith(order.IDEQ(ownerA.ID))).
+		Order(cancelorderflowrun.ByCreatedAt()).
+		All(adminCtx)
+	require.NoError(t, err)
+	require.Len(t, byOwner, 2, "must see exactly this order's own runs, not the other order's")
+	require.Equal(t, first.ID, byOwner[0].ID, "ordered by creation time")
+	require.Equal(t, second.ID, byOwner[1].ID, "ordered by creation time")
+
+	// Runs filtered to a terminal failure state — the colon-bearing
+	// failed:<step> value (D-27) is an ordinary enum equality predicate.
+	failed, err := client.CancelOrderFlowRun.Query().
+		Where(cancelorderflowrun.StateEQ(cancelorderflowrun.StateFailedCancel)).
+		All(adminCtx)
+	require.NoError(t, err)
+	require.Len(t, failed, 1)
+	require.Equal(t, second.ID, failed[0].ID)
 }
