@@ -15,6 +15,7 @@ package worker
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -109,19 +110,26 @@ func ResolveTracerProvider(tp trace.TracerProvider) trace.TracerProvider {
 // the string persisted to a run row's trace_context column (D-59).
 const traceContextSep = "-"
 
-// EncodeTraceContext renders sc's trace and span identifiers into the
-// delimited hex string persisted to a run row's trace_context column:
-// "<32-hex-trace-id>-<16-hex-span-id>". Uses the trace package's own hex
-// rendering (TraceID.String/SpanID.String) exclusively — no dependency on
-// the propagation package, keeping D-57's exception to exactly the trace
-// API's own closure (see RESEARCH.md Pattern 5). An invalid span context
-// (the zero value, or one built from a run claimed before this feature
-// existed) encodes to the empty string.
+// EncodeTraceContext renders sc's trace identifier, span identifier, and
+// trace flags into the delimited hex string persisted to a run row's
+// trace_context column: "<32-hex-trace-id>-<16-hex-span-id>-<2-hex-flags>".
+// Uses the trace package's own hex rendering (TraceID.String/SpanID.String)
+// exclusively — no dependency on the propagation package, keeping D-57's
+// exception to exactly the trace API's own closure (see RESEARCH.md Pattern
+// 5). An invalid span context (the zero value, or one built from a run
+// claimed before this feature existed) encodes to the empty string.
+//
+// TraceFlags carries the sampled bit. It is not cosmetic: a real SDK's
+// default ParentBased sampler consults the parent's TraceFlags to decide
+// whether a child restored from a remote parent (WithRestoredParent) is
+// itself sampled. Dropping it would silently stop recording every span
+// after a run's first claim under exactly the sampler configuration an
+// application is most likely to run in production.
 func EncodeTraceContext(sc trace.SpanContext) string {
 	if !sc.IsValid() {
 		return ""
 	}
-	return sc.TraceID().String() + traceContextSep + sc.SpanID().String()
+	return sc.TraceID().String() + traceContextSep + sc.SpanID().String() + traceContextSep + sc.TraceFlags().String()
 }
 
 // DecodeTraceContext parses a value stored in a run row's trace_context
@@ -137,8 +145,8 @@ func DecodeTraceContext(stored string) (sc trace.SpanContext, ok bool) {
 	if stored == "" {
 		return trace.SpanContext{}, false
 	}
-	parts := strings.SplitN(stored, traceContextSep, 2)
-	if len(parts) != 2 {
+	parts := strings.SplitN(stored, traceContextSep, 3)
+	if len(parts) != 3 {
 		return trace.SpanContext{}, false
 	}
 	traceID, err := trace.TraceIDFromHex(parts[0])
@@ -149,10 +157,15 @@ func DecodeTraceContext(stored string) (sc trace.SpanContext, ok bool) {
 	if err != nil {
 		return trace.SpanContext{}, false
 	}
+	flags, err := strconv.ParseUint(parts[2], 16, 8)
+	if err != nil {
+		return trace.SpanContext{}, false
+	}
 	restored := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID: traceID,
-		SpanID:  spanID,
-		Remote:  true,
+		TraceID:    traceID,
+		SpanID:     spanID,
+		TraceFlags: trace.TraceFlags(flags),
+		Remote:     true,
 	})
 	if !restored.IsValid() {
 		return trace.SpanContext{}, false

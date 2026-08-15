@@ -3,6 +3,8 @@ package worker
 import (
 	"context"
 	"time"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Default* constants are the values New fills unset Options fields with
@@ -87,18 +89,15 @@ type Options struct {
 	// accidentally trust.
 	Context func(context.Context) context.Context
 
-	// TracerProvider will supply the OpenTelemetry TracerProvider per-run
-	// and per-step spans (D-58) are created against, once D-57's narrow,
-	// named exception to the META-02 dependency test (D-04) lands and
-	// entflow core takes its one sanctioned dependency beyond ent —
-	// go.opentelemetry.io/otel/trace, API only, never the SDK. This plan
-	// adds no new module (T-02-SC; TestNoTransportDeps is the standing
-	// gate this field must not trip), so the field is typed any here
-	// rather than trace.TracerProvider; it narrows to the real type the
-	// moment that plan lands, with no call-site change for a caller who
-	// passes nil. Defaults to nil (no tracing), so an application that
-	// wires nothing pays nothing.
-	TracerProvider any
+	// TracerProvider supplies the OpenTelemetry TracerProvider per-run and
+	// per-step spans (D-58) are created against — D-57's one sanctioned
+	// dependency beyond ent, go.opentelemetry.io/otel/trace, API only,
+	// never the SDK. Nil (the default) resolves to
+	// worker.DefaultTracerProvider() — the trace module's own no-op
+	// provider — via worker.ResolveTracerProvider, at the point of use in
+	// worker/dbstep.go, so an application that wires nothing pays nothing
+	// and pulls nothing beyond the trace API's own dependency-free closure.
+	TracerProvider trace.TracerProvider
 
 	// RetryableError classifies an error returned from a DB step's closure
 	// (or from the database driver) as retryable — consumed by the DB-step

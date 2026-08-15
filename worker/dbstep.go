@@ -7,9 +7,111 @@ import (
 	"fmt"
 	"time"
 
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/smintz/entflow"
 	"github.com/smintz/entflow/internal/wfmarker"
 )
+
+// tracerName is the instrumentation name every span this package starts is
+// recorded under (D-58) — the single call site that names the tracer, so
+// every span in a trace attributes back to entflow/worker consistently.
+const tracerName = "github.com/smintz/entflow/worker"
+
+// claimTelemetry bundles the span-related values one claim's success and
+// failure write paths both need to finish D-58/D-59's span recording —
+// resolved once per claim (claimOnce), then passed into failStep so its own
+// doc comment about sharing claimOnce's transaction/committed pointer stays
+// accurate.
+//
+// firstClaim is keyed off run.TraceContext being empty, not
+// run.CurrentStep == "" — deliberately: a retryable driver error on the
+// run's very first step (D-51) leaves CurrentStep empty on every retried
+// attempt, but the root span must be created exactly once, on the attempt
+// that actually seeds trace_context. Keying on TraceContext instead means a
+// retried first attempt correctly restores the same root rather than
+// forking a second, unrelated trace.
+type claimTelemetry struct {
+	tracer     trace.Tracer
+	spanCtx    context.Context
+	rootSpan   trace.Span
+	flow       string
+	firstClaim bool
+}
+
+// startClaimTelemetry resolves opts.TracerProvider (defaulting to the
+// no-op provider, D-58) and either starts the run's root span — on the
+// claim that first seeds trace_context — or restores the persisted trace
+// context as a remote parent for this claim's own step span (D-59).
+//
+// The root span is started and ended within the SAME claim that creates it;
+// it is never held open across a claim boundary, because a span cannot
+// survive a process boundary. A reader expecting a long-lived root span
+// spanning the whole run's lifetime will not find one here — later claims
+// restore its trace/span identifiers as a remote parent instead (see
+// WithRestoredParent), which is what lets a step span in a different
+// process still land in the same trace.
+func startClaimTelemetry(ctx context.Context, opts Options, runID any, flow, storedTraceContext string) claimTelemetry {
+	tracer := ResolveTracerProvider(opts.TracerProvider).Tracer(tracerName)
+	firstClaim := storedTraceContext == ""
+
+	spanCtx := ctx
+	var rootSpan trace.Span
+	if firstClaim {
+		spanCtx, rootSpan = tracer.Start(ctx, RootSpanName(flow), trace.WithAttributes(RunAttributes(runID, flow)...))
+	} else {
+		spanCtx = WithRestoredParent(ctx, storedTraceContext)
+	}
+
+	return claimTelemetry{
+		tracer:     tracer,
+		spanCtx:    spanCtx,
+		rootSpan:   rootSpan,
+		flow:       flow,
+		firstClaim: firstClaim,
+	}
+}
+
+// finishSpans records this claim's step span (only when a step actually ran
+// or errored — step == "" means every remaining step was skipped, and a
+// skipped step never gets a span) and, on the claim that owns the root
+// span, sets its final state attribute and ends it (D-58: "the run's
+// terminal state appears as an attribute on the root span" — literally true
+// whenever the run's first claim is also its last, e.g. a single-DB-step
+// flow or a run whose every step is skipped; on a later claim the root span
+// no longer exists to update, so only the step span carries state).
+//
+// stepErr, when non-nil, is recorded on the step span through the
+// error-recording API with the span status set to error, rendered via
+// stepErr.Error() — StepError's own message, which names the step and kind
+// and never embeds the run's input bytes (T-02-03).
+func (tel claimTelemetry) finishSpans(runID any, step string, attempt int, state string, stepErr error) {
+	if step != "" {
+		_, span := tel.tracer.Start(tel.spanCtx, SpanName(tel.flow, step), trace.WithAttributes(StepAttributes(runID, tel.flow, step, attempt, state)...))
+		if stepErr != nil {
+			span.RecordError(stepErr)
+			span.SetStatus(codes.Error, stepErr.Error())
+		}
+		span.End()
+	}
+	if tel.firstClaim {
+		tel.rootSpan.SetAttributes(AttrState.String(state))
+		tel.rootSpan.End()
+	}
+}
+
+// traceContextToPersist returns the value this claim's write should persist
+// to trace_context: the newly-seeded root span's own context on the claim
+// that created it, or the value already on the row, unchanged, on every
+// later claim — trace_context is written exactly once per run, at whichever
+// claim's write actually first commits it.
+func (tel claimTelemetry) traceContextToPersist(existing string) string {
+	if tel.firstClaim {
+		return EncodeTraceContext(tel.rootSpan.SpanContext())
+	}
+	return existing
+}
 
 // claimStates are the two run states a claim query considers (D-32). done,
 // cancelled, and every failed:<step> value are terminal and structurally
@@ -24,8 +126,10 @@ var claimStates = []string{entflow.RunStatePending, entflow.RunStateRunning}
 // leaving the row exactly as claimable as it was.
 //
 // claimed is false with a nil error when nothing was claimable — not an
-// error condition.
-func claimOnce(ctx context.Context, store entflow.RunStore, runner entflow.Runner, strategy ClaimStrategy, opts Options) (claimed bool, err error) {
+// error condition. A claim cycle that finds nothing claimable starts no
+// span at all: an empty poll is not a run event (see the early return right
+// after strategy.Claim below, well before any telemetry is resolved).
+func claimOnce(ctx context.Context, flowName string, store entflow.RunStore, runner entflow.Runner, strategy ClaimStrategy, opts Options) (claimed bool, err error) {
 	txAny, err := store.BeginTx(ctx)
 	if err != nil {
 		return false, fmt.Errorf("entflow/worker: opening claim transaction: %w", err)
@@ -103,6 +207,13 @@ func claimOnce(ctx context.Context, store entflow.RunStore, runner entflow.Runne
 	if err != nil {
 		return false, fmt.Errorf("entflow/worker: resolving step order: %w", err)
 	}
+
+	// tel resolves Options.TracerProvider (defaulting to the no-op provider)
+	// and either starts this run's root span (on the claim that first seeds
+	// trace_context, D-59) or restores the persisted trace context as this
+	// claim's remote parent — see startClaimTelemetry's doc comment for why
+	// the root span never survives past the claim that created it.
+	tel := startClaimTelemetry(ctx, opts, id, flowName, run.TraceContext)
 
 	// selfWas is the D-42 entry-time self-status snapshot, persisted on the
 	// run row's self_was column: taken once, on the first claim of a run
@@ -196,7 +307,7 @@ func claimOnce(ctx context.Context, store entflow.RunStore, runner entflow.Runne
 	// must be handled — not ignored — by abandoning the claim rather than
 	// resurrecting a run that is no longer ours.
 	if stepErr != nil {
-		return failStep(ctx, store, txAny, tx, id, run, failingStep, stepErr, opts, &committed)
+		return failStep(ctx, store, txAny, tx, id, run, failingStep, stepErr, opts, &committed, tel)
 	}
 
 	if ranStep != "" {
@@ -213,6 +324,12 @@ func claimOnce(ctx context.Context, store entflow.RunStore, runner entflow.Runne
 		adv.ToState = entflow.RunStateDone
 		adv.Finished = true
 	}
+
+	// ranStep is "" exactly when every remaining step was skipped — the
+	// D-58 empty edge: one root span (already started above), zero child
+	// spans, finishSpans's step=="" branch a no-op.
+	tel.finishSpans(id, ranStep, adv.Attempt, adv.ToState, nil)
+	adv.TraceContext = tel.traceContextToPersist(run.TraceContext)
 
 	advanced, err := store.Advance(ctx, txAny, id, adv)
 	if err != nil {
@@ -246,7 +363,7 @@ func claimOnce(ctx context.Context, store entflow.RunStore, runner entflow.Runne
 // kind and never embeds the run's input bytes, T-02-03) in last_error. A
 // non-retryable error never increments attempt at all — retrying a
 // business-logic error would just burn the ceiling for no reason.
-func failStep(ctx context.Context, store entflow.RunStore, txAny any, tx entflow.Tx, id any, run *entflow.Run, failingStep string, stepErr error, opts Options, committed *bool) (bool, error) {
+func failStep(ctx context.Context, store entflow.RunStore, txAny any, tx entflow.Tx, id any, run *entflow.Run, failingStep string, stepErr error, opts Options, committed *bool, tel claimTelemetry) (bool, error) {
 	f := entflow.Fail{
 		FromState: run.State,
 		FromStep:  run.CurrentStep,
@@ -268,6 +385,14 @@ func failStep(ctx context.Context, store entflow.RunStore, txAny any, tx entflow
 		f.Attempt = newAttempt
 		f.LastError = stepErr.Error()
 	}
+
+	// The failing step's span records stepErr through the error-recording
+	// API with an error status (D-58); the root span (first claim only)
+	// gets f.ToState as its final state attribute — see finishSpans' doc
+	// comment for the "root span only outlives the claim that created it"
+	// caveat this shares with the success path.
+	tel.finishSpans(id, failingStep, f.Attempt, f.ToState, stepErr)
+	f.TraceContext = tel.traceContextToPersist(run.TraceContext)
 
 	failed, ferr := store.Fail(ctx, txAny, id, f)
 	if ferr != nil {

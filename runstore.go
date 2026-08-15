@@ -151,4 +151,12 @@ type Fail struct {
 	// RetryAfter, when non-nil, schedules the run's next claimable time
 	// rather than failing it terminally.
 	RetryAfter *time.Time
+	// TraceContext is the OTel trace context to persist (D-59) — carried on
+	// Fail as well as Advance because a step can fail on the run's very
+	// first claim (the one that would otherwise seed trace_context for
+	// every later claim, including a retry of that same first step). Without
+	// this field a retried first step would start a brand-new trace on every
+	// attempt, defeating D-59's whole point. Unused until plan 02-06 wires
+	// real spans.
+	TraceContext string
 }

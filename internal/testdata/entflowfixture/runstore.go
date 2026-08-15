@@ -246,7 +246,8 @@ func (s *RunStore) Fail(ctx context.Context, tx any, runID any, f entflow.Fail) 
 		).
 		SetState(cancelorderflowrun.State(f.ToState)).
 		SetAttempt(f.Attempt).
-		SetLastError(f.LastError)
+		SetLastError(f.LastError).
+		SetTraceContext(f.TraceContext)
 
 	if f.RetryAfter != nil {
 		upd = upd.SetRetryAfter(*f.RetryAfter)
