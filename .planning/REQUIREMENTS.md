@@ -27,7 +27,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **DUR-01**: Developer can start a run with `flow.Start(ctx, in)`, which persists a run row in `state=pending` and returns a run handle
 - [x] **DUR-02**: The run row persists state, serialized input, current step, attempt counter, last error, timestamps, and an edge to the owning aggregate row for lineage
 - [x] **DUR-03**: A DB step's effect and the run's progress pointer commit in the same transaction — a step effect never commits without its progress record
-- [ ] **DUR-04**: The worker claims runs with `SELECT ... FOR UPDATE SKIP LOCKED`, so multiple workers run concurrently with no coordination service
+- [x] **DUR-04**: The worker claims runs with `SELECT ... FOR UPDATE SKIP LOCKED`, so multiple workers run concurrently with no coordination service
 - [ ] **DUR-05**: A run interrupted by a worker crash at any step boundary is resumed by any worker and reaches the same terminal state
 - [x] **DUR-06**: The worker re-claims the run at each step boundary rather than holding a lease across the whole flow
 - [ ] **DUR-07**: A run whose steps all succeed reaches `state=done` with the response recorded; a run whose step fails after retries exhaust reaches `failed:<step>` with the error recorded
@@ -153,7 +153,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DUR-01 | Phase 2 | Complete |
 | DUR-02 | Phase 2 | Complete |
 | DUR-03 | Phase 2 | Complete |
-| DUR-04 | Phase 2 | Pending |
+| DUR-04 | Phase 2 | Complete |
 | DUR-05 | Phase 2 | Pending |
 | DUR-06 | Phase 2 | Complete |
 | DUR-07 | Phase 2 | Pending |

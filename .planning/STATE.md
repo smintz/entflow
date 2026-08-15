@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: Durability
 status: executing
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-08-15T12:10:50.264Z"
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-08-15T12:32:41.001Z"
 last_activity: 2026-08-15
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 12
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-08)
 ## Current Position
 
 Phase: 02 (Durability) — EXECUTING
-Plan: 3 of 8
+Plan: 4 of 8
 Status: Ready to execute
 Last activity: 2026-08-15 — Phase 02 execution resumed (wave continue)
 
-Progress: [█████░░░░░] 50%
+Progress: [██████░░░░] 58%
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Progress: [█████░░░░░] 50%
 | Phase 01 P04 | 28min | 3 tasks | 13 files |
 | Phase 02-durability P01 | 18min | 2 tasks | 29 files |
 | Phase 02 P02 | 55min | 3 tasks | 15 files |
+| Phase 02-durability P03 | 30min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -92,6 +93,9 @@ Recent decisions affecting current work:
 - [Phase ?]: D-25 deviation documented on entflow.Start's own doc comment: DUR-01's literal flow.Start(ctx, in) is unreachable in Phase 2 without an ambient global D-15 rejects — Start is a package-level generic function; Phase 6 codegen restores the design-doc call shape.
 - [Phase ?]: Runner.StepOrder/EntrySelfStatus scope to DB-kind steps only, not the full step graph — CancelOrder legitimately declares an Activity/Emit step alongside its one DB step, and durable execution in Phase 2 must not demand a WithSelfStatus reader for a condition on a step that will never run.
 - [Phase ?]: worker/options.go's TracerProvider field stays typed any (not the real otel trace.TracerProvider) until D-57's dependency exception to the META-02 test lands in a later plan — this plan adds no new module and TestNoTransportDeps is the standing gate.
+- [Phase ?]: [Phase 02-03]: D-38 ratified — one table-driven conformance suite proves no-double-claim and rolled-back-claim-stays-claimable on Postgres and SQLite for real (internal/testdata/pgtest), MySQL an explicit named skip, not a silently absent row.
+- [Phase ?]: [Phase 02-03]: SQLite concurrency testing must use a file-backed (not shared-cache in-memory) client with both _txlock=immediate and _busy_timeout — shared-cache mode's SQLITE_LOCKED error path is not covered by modernc.org/sqlite's busy-handler retry the way ordinary file-lock SQLITE_BUSY is.
+- [Phase ?]: [Phase 02-03]: Worker.Run is now a pool of Options.Concurrency independent claim goroutines (D-31), each with its own claimOnceRecovered recover boundary separate from runStep's per-closure recover — a bug in worker bookkeeping itself can no longer crash the whole process.
 
 ### Pending Todos
 
@@ -118,6 +122,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-15T12:10:50.247Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-08-15T12:32:40.982Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None
