@@ -39,10 +39,17 @@ Never commit the compiled binary — it is a build artifact, not source.
 | `ENTFLOW_CRASHWORKER_CONCURRENCY` | No | `worker.DefaultConcurrency` (4) | Forwarded to `worker.Options.Concurrency`. |
 | `ENTFLOW_CRASHWORKER_POLL_INTERVAL` | No | `worker.DefaultPollInterval` (1s) | A Go duration string (e.g. `50ms`), forwarded to `worker.Options.PollInterval`. |
 | `ENTFLOW_CRASHWORKER_DRAIN_TIMEOUT` | No | `worker.DefaultDrainTimeout` (30s) | A Go duration string, forwarded to `worker.Options.DrainTimeout` — how long `Shutdown` waits for an in-flight step to commit before cancelling it (D-49). |
+| `ENTFLOW_CRASHWORKER_CRASH_POINT` | No (both-or-neither with `SENTINEL_PATH`) | — | Plan 02-08's tier-2 arming hook: the exact crash-point name (`internal/crashpoint.Name`/`PreClaimName`) to install a hook at. When set, `run()` calls `armCrashPoint` BEFORE constructing the worker, so the hook is in place before any claim can reach it. |
+| `ENTFLOW_CRASHWORKER_SENTINEL_PATH` | No (both-or-neither with `CRASH_POINT`) | — | The file path the armed hook writes atomically (temp file + rename, so a reader never observes a partial write) immediately after this process reaches the crash point and immediately before it blocks forever, holding the claim's transaction open and uncommitted until this whole process is killed. |
 
 An unparseable `POLL_INTERVAL`/`DRAIN_TIMEOUT` or `CONCURRENCY` value falls
 back to its default silently — this is a worked example's convenience, not
-a production-hardened flag parser.
+a production-hardened flag parser. `ENTFLOW_CRASHWORKER_CRASH_POINT` and
+`ENTFLOW_CRASHWORKER_SENTINEL_PATH` are the one pair of environment
+variables that is NOT independently optional: setting one without the
+other is a startup error, since a crash point with nowhere to write its
+sentinel (or a sentinel path with nothing arming it) is always a test
+harness mistake, never a legitimate configuration.
 
 ## Flows
 

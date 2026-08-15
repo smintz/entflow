@@ -152,6 +152,38 @@ func parseCrashPointName(name string) (step string, isPreClaim bool) {
 	return name[:idx], false
 }
 
+// establishCrashSimBaseline runs processOrder to completion with no crash
+// installed and records the ground truth every crashed-and-resumed run in
+// both tiers is compared against exactly (not "close enough"): the
+// terminal run state, the owning Order's final field values, and the
+// effect counter's final value. Shared by crashsim_test.go (tier 1) and
+// crashsim_tier2_test.go (tier 2) so both tiers certify the SAME baseline
+// rather than risking two independently-computed ones drifting apart.
+func establishCrashSimBaseline(t *testing.T, ctx context.Context, client *ent.Client, store entflow.RunStore, processOrder *entflow.FlowOf[*schema.ProcessOrderRequest]) crashSimBaseline {
+	t.Helper()
+	eng := entflow.NewEngine()
+	require.NoError(t, eng.Register(processOrder, store))
+
+	owner, err := client.Order.Create().SetStatus(order.StatusDraft).Save(ctx)
+	require.NoError(t, err)
+	run, err := entflow.Start(ctx, eng, processOrder, &schema.ProcessOrderRequest{OrderID: owner.ID})
+	require.NoError(t, err)
+
+	w := newCrashSimWorker(t, eng)
+	driveToTerminal(t, ctx, w, client, run.ID.(int), 10*time.Second)
+
+	finalRun, err := client.CancelOrderFlowRun.Get(ctx, run.ID.(int))
+	require.NoError(t, err)
+	finalOrder, err := client.Order.Get(ctx, owner.ID)
+	require.NoError(t, err)
+
+	return crashSimBaseline{
+		terminalState: string(finalRun.State),
+		orderStatus:   finalOrder.Status,
+		effectCount:   finalOrder.EffectCount,
+	}
+}
+
 // TestCrashSimTier1 is tier 1 of the crash-simulation release gate
 // (D-52/TEST-01/TEST-02): fast, in-process, deterministic, and the bulk of
 // the crash-point matrix. For every name crashpoint.Matrix enumerates from
@@ -190,27 +222,7 @@ func TestCrashSimTier1(t *testing.T) {
 	// failure, not merely a whole-suite abort before any subtest runs. ---
 	var baseline crashSimBaseline
 	t.Run("baseline", func(t *testing.T) {
-		eng := entflow.NewEngine()
-		require.NoError(t, eng.Register(processOrder, store))
-
-		owner, err := client.Order.Create().SetStatus(order.StatusDraft).Save(ctx)
-		require.NoError(t, err)
-		run, err := entflow.Start(ctx, eng, processOrder, &schema.ProcessOrderRequest{OrderID: owner.ID})
-		require.NoError(t, err)
-
-		w := newCrashSimWorker(t, eng)
-		driveToTerminal(t, ctx, w, client, run.ID.(int), 10*time.Second)
-
-		finalRun, err := client.CancelOrderFlowRun.Get(ctx, run.ID.(int))
-		require.NoError(t, err)
-		finalOrder, err := client.Order.Get(ctx, owner.ID)
-		require.NoError(t, err)
-
-		baseline = crashSimBaseline{
-			terminalState: string(finalRun.State),
-			orderStatus:   finalOrder.Status,
-			effectCount:   finalOrder.EffectCount,
-		}
+		baseline = establishCrashSimBaseline(t, ctx, client, store, processOrder)
 		require.Equal(t, string(cancelorderflowrun.StateDone), baseline.terminalState, "an uncrashed ProcessOrder run must reach done")
 		require.Equal(t, order.StatusShipped, baseline.orderStatus, "an uncrashed ProcessOrder run must reach the last step's transition")
 		require.Equal(t, len(stepOrder), baseline.effectCount, "an uncrashed ProcessOrder run must apply each step's effect exactly once")

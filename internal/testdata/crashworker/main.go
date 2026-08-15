@@ -22,6 +22,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" driver name
 
 	"github.com/smintz/entflow"
+	"github.com/smintz/entflow/internal/crashpoint"
 	"github.com/smintz/entflow/internal/testdata/ent"
 	_ "github.com/smintz/entflow/internal/testdata/ent/runtime"
 	"github.com/smintz/entflow/internal/testdata/ent/schema"
@@ -36,7 +37,69 @@ const (
 	envConcurrency  = "ENTFLOW_CRASHWORKER_CONCURRENCY"
 	envPollInterval = "ENTFLOW_CRASHWORKER_POLL_INTERVAL"
 	envDrainTimeout = "ENTFLOW_CRASHWORKER_DRAIN_TIMEOUT"
+	// envCrashPoint and envSentinelPath arm this binary as plan 02-08's
+	// tier-2 kill target (D-52/D-53): when both are set, the binary
+	// installs a crashpoint.Install hook at the named boundary that writes
+	// the sentinel file and then blocks forever, so the process is sitting
+	// at a precisely known point in a still-open (uncommitted) transaction
+	// when the test process SIGKILLs it. Neither variable does anything on
+	// its own — arming requires both.
+	envCrashPoint   = "ENTFLOW_CRASHWORKER_CRASH_POINT"
+	envSentinelPath = "ENTFLOW_CRASHWORKER_SENTINEL_PATH"
 )
+
+// sentinelContents is the fixed, plain byte sequence the sentinel file
+// always contains — content carries no information the test needs (the
+// FILE'S EXISTENCE is the signal), so there is nothing dynamic here that
+// could make the write's encoding, newline, or locale dependent.
+var sentinelContents = []byte("entflow-crashpoint-reached\n")
+
+// armCrashPoint installs a crashpoint hook at name that writes sentinelPath
+// atomically (write to a temp path in the same directory, fsync, then
+// rename — so the test process can never observe a partially written file)
+// and then blocks forever, holding whatever transaction called
+// crashpoint.At open and uncommitted until this whole process is killed.
+// The write happens strictly after the process has reached this exact
+// point in worker/dbstep.go's claim path and strictly before it blocks.
+func armCrashPoint(name, sentinelPath string) {
+	crashpoint.Install(name, func() error {
+		if err := writeSentinelAtomically(sentinelPath); err != nil {
+			// Nothing this process can do to report failure usefully once
+			// armed — the test process's own deadline-bounded wait for the
+			// sentinel file will time out and name what was still missing.
+			return err
+		}
+		select {} // block forever: the process now sits here until SIGKILLed.
+	})
+}
+
+// writeSentinelAtomically writes sentinelContents to path via a temp file
+// in the same directory followed by a rename, which POSIX guarantees is
+// atomic on the same filesystem — the test process reading path either
+// sees the file fully absent or fully present with its complete contents,
+// never a partial write.
+func writeSentinelAtomically(path string) error {
+	tmp := path + ".tmp"
+	f, err := os.Create(tmp)
+	if err != nil {
+		return fmt.Errorf("creating sentinel temp file: %w", err)
+	}
+	if _, err := f.Write(sentinelContents); err != nil {
+		f.Close()
+		return fmt.Errorf("writing sentinel temp file: %w", err)
+	}
+	if err := f.Sync(); err != nil {
+		f.Close()
+		return fmt.Errorf("syncing sentinel temp file: %w", err)
+	}
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("closing sentinel temp file: %w", err)
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		return fmt.Errorf("renaming sentinel temp file into place: %w", err)
+	}
+	return nil
+}
 
 func main() {
 	if err := run(); err != nil {
@@ -78,6 +141,15 @@ func run() error {
 	}
 	if names := os.Getenv(envFlows); names != "" {
 		opts.Flows = strings.Split(names, ",")
+	}
+
+	crashPointName := os.Getenv(envCrashPoint)
+	sentinelPath := os.Getenv(envSentinelPath)
+	switch {
+	case crashPointName != "" && sentinelPath != "":
+		armCrashPoint(crashPointName, sentinelPath)
+	case crashPointName != "" || sentinelPath != "":
+		return fmt.Errorf("%s and %s must be set together (both or neither)", envCrashPoint, envSentinelPath)
 	}
 
 	w, err := worker.New(eng, opts)
