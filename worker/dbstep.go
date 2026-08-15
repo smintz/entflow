@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/smintz/entflow"
@@ -78,6 +79,13 @@ func claimOnce(ctx context.Context, store entflow.RunStore, runner entflow.Runne
 		return false, fmt.Errorf("entflow/worker: resolving step order: %w", err)
 	}
 
+	// selfWas is the D-42 entry-time self-status snapshot, persisted on the
+	// run row's self_was column: taken once, on the first claim of a run
+	// (run.CurrentStep == ""), and read back from run.SelfWas (the value
+	// RunStore.Load hydrated from that same self_was column) on every later
+	// claim — never recomputed against the entity's live status, which is
+	// exactly what keeps a SelfWas condition's D-10 entry semantics stable
+	// across a crash and across processes.
 	selfWas := run.SelfWas
 	nextIdx := 0
 	if run.CurrentStep == "" {
@@ -109,6 +117,17 @@ func claimOnce(ctx context.Context, store entflow.RunStore, runner entflow.Runne
 		SelfWas:      selfWas,
 	}
 
+	// Load the current claim's live self value once, before executing any
+	// step — a fresh read on every claim, inside this claim's own
+	// transaction, never cached across claims and never rehydrated from
+	// persisted JSON (D-41). A flow that declares no WithSelfLoader gets
+	// ErrNoSelfLoader here, which is not a claim failure: self simply stays
+	// nil, and Self[T] inside a step reports that same sentinel.
+	self, err := runner.LoadSelf(ctx, txAny, run.Input)
+	if err != nil && !errors.Is(err, entflow.ErrNoSelfLoader) {
+		return false, fmt.Errorf("entflow/worker: loading self for run %v: %w", id, err)
+	}
+
 	ranStep := ""
 	for i := nextIdx; i < len(stepOrder); i++ {
 		name := stepOrder[i]
@@ -117,6 +136,7 @@ func claimOnce(ctx context.Context, store entflow.RunStore, runner entflow.Runne
 			Input:   run.Input,
 			SelfWas: selfWas,
 			Results: run.Results,
+			Self:    self,
 		})
 		if execErr != nil {
 			return false, fmt.Errorf("entflow/worker: executing step %q: %w", name, execErr)

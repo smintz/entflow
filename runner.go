@@ -39,6 +39,14 @@ type Runner interface {
 	// input, returning the D-26 lineage edge target boxed as any.
 	OwnerRef(input []byte) (any, error)
 
+	// LoadSelf invokes f's declared WithSelfLoader against tx and the
+	// decoded input, returning the live owning entity boxed as any — a
+	// fresh read on every call, never cached. Returns an error wrapping
+	// ErrNoSelfLoader when f declares no WithSelfLoader; the caller (the
+	// worker, via StepCall.Self) treats that as "Self[T] unavailable this
+	// claim", not a claim failure.
+	LoadSelf(ctx context.Context, tx any, input []byte) (any, error)
+
 	// ExecStep decodes input, evaluates the named step's conditions against
 	// c.SelfWas, and — if they hold — executes exactly that one step's
 	// closure against tx through the same recover boundary Exec uses.
@@ -60,6 +68,13 @@ type StepCall struct {
 	Input   []byte
 	SelfWas string
 	Results map[string]json.RawMessage
+	// Self is the current claim's live owning entity, already resolved by
+	// the caller via Runner.LoadSelf — boxed as any because ExecStep is
+	// the tx-erased seam. nil when the flow declares no WithSelfLoader;
+	// ExecStep attaches it to the step closure's context only when
+	// non-nil, so Self[T] inside a step with no declared loader still
+	// reports ErrNoSelfLoader rather than a stale or zero value.
+	Self any
 }
 
 // StepOutcome reports what ExecStep did. Ran is false when the step's
@@ -141,6 +156,18 @@ func (f *FlowOf[In]) EntrySelfStatus(ctx context.Context, tx any, input []byte) 
 	return f.selfStatusReader(ctx, tx, in)
 }
 
+// LoadSelf implements Runner.
+func (f *FlowOf[In]) LoadSelf(ctx context.Context, tx any, input []byte) (any, error) {
+	if f.selfLoader == nil {
+		return nil, fmt.Errorf("entflow: flow %q: %w", f.name, ErrNoSelfLoader)
+	}
+	in, err := f.codec.Unmarshal(input)
+	if err != nil {
+		return nil, fmt.Errorf("entflow: flow %q: decoding input for self loader: %w", f.name, err)
+	}
+	return f.selfLoader(ctx, tx, in)
+}
+
 // OwnerRef implements Runner.
 func (f *FlowOf[In]) OwnerRef(input []byte) (any, error) {
 	if f.ownerRef == nil {
@@ -202,6 +229,14 @@ func (f *FlowOf[In]) ExecStep(ctx context.Context, tx any, c StepCall) (StepOutc
 	// re-marshal: they are already exactly what a previous claim's
 	// putResult produced.
 	ctx = withResultsFrom(ctx, c.Results)
+
+	// Attach the current claim's live self value, already resolved by the
+	// caller via LoadSelf, before the step closure runs — only when
+	// present, so a flow with no declared WithSelfLoader leaves Self[T]
+	// reporting ErrNoSelfLoader rather than a stale or zero value.
+	if c.Self != nil {
+		ctx = setSelf(ctx, c.Self)
+	}
 
 	result, ran, err := runOneStep(ctx, target, tx, in, c.SelfWas)
 	if err != nil {

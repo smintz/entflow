@@ -52,6 +52,15 @@ type flowConfig struct {
 	// to its own In, mirroring selfStatusInType's declaration-time
 	// mismatch protection (WR-04).
 	ownerRefInType reflect.Type
+	// selfLoader is the type-erased adapter WithSelfLoader (selfloader.go)
+	// installs — the mechanism behind Self[T]. nil unless a WithSelfLoader
+	// option was applied.
+	selfLoader func(ctx context.Context, tx any, in any) (any, error)
+	// selfLoaderInType is the In type WithSelfLoader's fn was declared
+	// against — set alongside selfLoader so New[In] can eagerly compare it
+	// to its own In, mirroring selfStatusInType's and ownerRefInType's
+	// identical declaration-time mismatch protection (WR-04).
+	selfLoaderInType reflect.Type
 }
 
 // FlowOption configures a FlowOf at construction time via New.
@@ -83,6 +92,13 @@ type FlowOf[In any] struct {
 	// this flow's input value to its owning aggregate's ID (D-26). nil
 	// unless the flow declared one.
 	ownerRef func(in any) (any, error)
+
+	// selfLoader is the type-erased adapter WithSelfLoader installs — the
+	// mechanism behind Self[T] (selfloader.go). nil unless the flow
+	// declared one; a flow that calls Self without one fails at Self's own
+	// call site with ErrNoSelfLoader (mirroring selfStatusReader's
+	// deferred-to-Exec-time failure mode for SelfWas).
+	selfLoader func(ctx context.Context, tx any, in any) (any, error)
 }
 
 // New constructs a flow builder named name, typed to input In. With no
@@ -99,12 +115,16 @@ func New[In any](name string, opts ...FlowOption) *FlowOf[In] {
 	if cfg.ownerRef != nil && cfg.ownerRefInType != reflect.TypeFor[In]() {
 		panic(fmt.Errorf("entflow: New[%s](%q): WithOwnerRef supplied a reader declared for input type %s, which does not match", reflect.TypeFor[In](), name, cfg.ownerRefInType))
 	}
+	if cfg.selfLoader != nil && cfg.selfLoaderInType != reflect.TypeFor[In]() {
+		panic(fmt.Errorf("entflow: New[%s](%q): WithSelfLoader supplied a reader declared for input type %s, which does not match", reflect.TypeFor[In](), name, cfg.selfLoaderInType))
+	}
 	return &FlowOf[In]{
 		name:             name,
 		codec:            resolveCodec[In](cfg),
 		selfStatusReader: cfg.selfStatus,
 		owner:            cfg.owner,
 		ownerRef:         cfg.ownerRef,
+		selfLoader:       cfg.selfLoader,
 	}
 }
 

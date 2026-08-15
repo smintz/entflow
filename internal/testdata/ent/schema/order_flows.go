@@ -33,6 +33,9 @@ func (Order) Flows() []entflow.Flow {
 		entflow.WithOwnerRef(func(in *CancelOrderRequest) (int, error) {
 			return in.OrderID, nil
 		}),
+		entflow.WithSelfLoader(func(ctx context.Context, tx *ent.Tx, in *CancelOrderRequest) (*ent.Order, error) {
+			return tx.Order.Get(ctx, in.OrderID)
+		}),
 	)
 	entflow.UpdateSelf(f, "cancel", func(ctx context.Context, tx *ent.Tx, in *CancelOrderRequest) (*ent.Order, error) {
 		return tx.Order.UpdateOneID(in.OrderID).

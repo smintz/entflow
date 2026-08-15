@@ -31,6 +31,15 @@ var ErrRunNotClaimable = errors.New("entflow: run not claimable")
 // exists to detect rather than silently overwrite (D-30).
 var ErrRunNotAdvanced = errors.New("entflow: run advance guard did not match")
 
+// ErrNoSelfLoader is returned by Self[T] when the current step's context
+// carries no live self value — a flow that calls Self without declaring
+// WithSelfLoader. Contrast Result[T]'s ErrUnknownStep (a step name never
+// recorded) and a SelfWas condition's silent false-evaluation: Self is the
+// one of the three seams that reports its own absence as an error a step
+// author sees directly, since there is no sensible default live entity to
+// hand back.
+var ErrNoSelfLoader = errors.New("entflow: flow declares no WithSelfLoader (see entflow.WithSelfLoader)")
+
 // StepError is the error every step failure surfaces as. It carries the
 // failing step's identity alongside the underlying cause, and unwraps to that
 // cause so errors.Is and errors.As reach through it — ent's own error types
