@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: Durability
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-08-15T11:43:45.209Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-08-15T12:10:50.264Z"
 last_activity: 2026-08-15
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 12
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-08)
 ## Current Position
 
 Phase: 02 (Durability) — EXECUTING
-Plan: 2 of 8
+Plan: 3 of 8
 Status: Ready to execute
 Last activity: 2026-08-15 — Phase 02 execution resumed (wave continue)
 
-Progress: [████░░░░░░] 42%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -63,6 +63,7 @@ Progress: [████░░░░░░] 42%
 | Phase 01 P03 | 34min | 3 tasks | 13 files |
 | Phase 01 P04 | 28min | 3 tasks | 13 files |
 | Phase 02-durability P01 | 18min | 2 tasks | 29 files |
+| Phase 02 P02 | 55min | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,10 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 02-01]: D-23 + D-27 ratified exactly as CONTEXT.md specifies (auto-selected under auto mode, checkpoint gate=blocking not blocking-human) — RunMixin's column set and the colon-bearing failed:<step> enum are now the persisted contract Phase 5 codegen must reproduce.
 - [Phase ?]: [Phase 02-01]: Closed RESEARCH.md Assumption A1 — sql/execquery's ExecContext/QueryContext land on *config/*txDriver (promoted onto *Client/*Tx via embedding) on the pinned ent v0.14.6 tag, not directly on *Client/*Tx as master-branch research suggested; signatures match exactly, no adaptation needed in later claim code.
 - [Phase ?]: [Phase 02-01]: Phase 2 ships no MySQL-specific partial-index variant (RESEARCH.md open question 2) — the D-34 index is documented Postgres/SQLite-only in run.go.
+- [Phase ?]: D-30 ratified exactly as specified (auto-selected under auto mode, checkpoint gate=blocking not blocking-human) — the claim transaction IS the step transaction, proven by TestClaimRollbackLeavesRunClaimable's paired absence claim.
+- [Phase ?]: D-25 deviation documented on entflow.Start's own doc comment: DUR-01's literal flow.Start(ctx, in) is unreachable in Phase 2 without an ambient global D-15 rejects — Start is a package-level generic function; Phase 6 codegen restores the design-doc call shape.
+- [Phase ?]: Runner.StepOrder/EntrySelfStatus scope to DB-kind steps only, not the full step graph — CancelOrder legitimately declares an Activity/Emit step alongside its one DB step, and durable execution in Phase 2 must not demand a WithSelfStatus reader for a condition on a step that will never run.
+- [Phase ?]: worker/options.go's TracerProvider field stays typed any (not the real otel trace.TracerProvider) until D-57's dependency exception to the META-02 test lands in a later plan — this plan adds no new module and TestNoTransportDeps is the standing gate.
 
 ### Pending Todos
 
@@ -113,6 +118,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-15T11:43:45.192Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-08-15T12:10:50.247Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None

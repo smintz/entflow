@@ -24,14 +24,14 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Durability
 
-- [ ] **DUR-01**: Developer can start a run with `flow.Start(ctx, in)`, which persists a run row in `state=pending` and returns a run handle
+- [x] **DUR-01**: Developer can start a run with `flow.Start(ctx, in)`, which persists a run row in `state=pending` and returns a run handle
 - [x] **DUR-02**: The run row persists state, serialized input, current step, attempt counter, last error, timestamps, and an edge to the owning aggregate row for lineage
-- [ ] **DUR-03**: A DB step's effect and the run's progress pointer commit in the same transaction — a step effect never commits without its progress record
+- [x] **DUR-03**: A DB step's effect and the run's progress pointer commit in the same transaction — a step effect never commits without its progress record
 - [ ] **DUR-04**: The worker claims runs with `SELECT ... FOR UPDATE SKIP LOCKED`, so multiple workers run concurrently with no coordination service
 - [ ] **DUR-05**: A run interrupted by a worker crash at any step boundary is resumed by any worker and reaches the same terminal state
-- [ ] **DUR-06**: The worker re-claims the run at each step boundary rather than holding a lease across the whole flow
+- [x] **DUR-06**: The worker re-claims the run at each step boundary rather than holding a lease across the whole flow
 - [ ] **DUR-07**: A run whose steps all succeed reaches `state=done` with the response recorded; a run whose step fails after retries exhaust reaches `failed:<step>` with the error recorded
-- [ ] **DUR-08**: Developer gets an explicit, documented dialect support matrix (Postgres first-class; MySQL and SQLite status stated) and a clear startup error rather than silent breakage on a dialect that cannot support the claim query
+- [x] **DUR-08**: Developer gets an explicit, documented dialect support matrix (Postgres first-class; MySQL and SQLite status stated) and a clear startup error rather than silent breakage on a dialect that cannot support the claim query
 - [ ] **DUR-09**: Developer can run the worker in-process alongside the API server or as a dedicated worker binary
 - [ ] **DUR-10**: The worker shuts down gracefully without abandoning a claimed run mid-step
 
@@ -150,14 +150,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SM-01 | Phase 1 | Complete |
 | META-01 | Phase 1 | Complete |
 | META-02 | Phase 1 | Complete |
-| DUR-01 | Phase 2 | Pending |
+| DUR-01 | Phase 2 | Complete |
 | DUR-02 | Phase 2 | Complete |
-| DUR-03 | Phase 2 | Pending |
+| DUR-03 | Phase 2 | Complete |
 | DUR-04 | Phase 2 | Pending |
 | DUR-05 | Phase 2 | Pending |
-| DUR-06 | Phase 2 | Pending |
+| DUR-06 | Phase 2 | Complete |
 | DUR-07 | Phase 2 | Pending |
-| DUR-08 | Phase 2 | Pending |
+| DUR-08 | Phase 2 | Complete |
 | DUR-09 | Phase 2 | Pending |
 | DUR-10 | Phase 2 | Pending |
 | OPS-01 | Phase 2 | Pending |
