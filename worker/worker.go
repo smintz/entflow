@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/smintz/entflow"
@@ -101,20 +102,60 @@ func (w *Worker) ClaimOnce(ctx context.Context) (claimed bool, err error) {
 	return false, nil
 }
 
-// Run drives a poll loop: on every tick (and on every Engine.Notify wakeup)
-// it drains ClaimOnce until nothing more is claimable, then waits out a
-// jittered PollInterval. Returns nil cleanly when ctx is cancelled.
+// Run starts Options.Concurrency independent claim goroutines (D-31: N
+// independent claim transactions, never one claim transaction fanning work
+// out to N goroutines — every goroutine calls ClaimOnce, which itself opens
+// and commits exactly one transaction claiming at most one run per
+// iteration). Nothing is shared between the goroutines but w itself — the
+// engine, the registered stores, and the underlying database connection
+// pool. No goroutine has an identity: no run is associated with a goroutine
+// or a process beyond the lifetime of one claim transaction, and no
+// in-memory structure here is keyed by run ID (see "The worker is a pool,
+// not a singleton" in docs/dialects.md).
+//
+// Run returns cleanly when ctx is cancelled: every goroutine stops starting
+// new claim iterations once it observes cancellation, and Run waits for
+// every in-flight iteration to finish before returning. Full drain semantics
+// (D-49: bounding that wait, then cancelling in-flight step contexts) and
+// poll jitter tuning are plan 02-07's expansion — this keeps plan 02-02's
+// ticker/jitter behavior unchanged so the two plans never race on the same
+// file.
 func (w *Worker) Run(ctx context.Context) error {
+	n := w.opts.Concurrency
+	if n <= 0 {
+		n = 1
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(n)
+	for i := 0; i < n; i++ {
+		go func() {
+			defer wg.Done()
+			w.pollLoop(ctx)
+		}()
+	}
+	wg.Wait()
+	return nil
+}
+
+// pollLoop is the body one claim goroutine runs: on every tick (and on
+// every Engine.Notify wakeup) it drains claimOnceRecovered until nothing
+// more is claimable, then waits out a jittered PollInterval. Returns when
+// ctx is cancelled. Every goroutine started by Run runs its own, entirely
+// independent copy of this loop against its own transactions — there is no
+// shared mutable state between them beyond w's own read-only fields and the
+// database itself.
+func (w *Worker) pollLoop(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
+			return
 		default:
 		}
 
 		for {
-			claimed, err := w.ClaimOnce(ctx)
-			if err != nil || !claimed {
+			claimed, _ := w.claimOnceRecovered(ctx)
+			if !claimed {
 				break
 			}
 		}
@@ -122,11 +163,33 @@ func (w *Worker) Run(ctx context.Context) error {
 		wait := jitteredInterval(w.opts.PollInterval, w.opts.Jitter)
 		select {
 		case <-ctx.Done():
-			return nil
+			return
 		case <-time.After(wait):
 		case <-w.eng.Nudges():
 		}
 	}
+}
+
+// claimOnceRecovered wraps ClaimOnce with its own recover boundary, mirroring
+// RunInTx's transaction-level recover (exec.go) but scoped to one claim
+// goroutine's iteration rather than one Exec call. This is a SEPARATE site
+// from runStep's per-closure recover (exec.go): a step closure's own panic
+// is already converted into a returned *entflow.StepError well before it
+// would ever reach here, so this recover only ever fires for a bug in the
+// claim-execute-advance bookkeeping itself (worker/dbstep.go), never for a
+// step author's panic. claimOnce's own deferred Rollback has already run by
+// the time this recover executes — defers run during panic unwinding
+// regardless of whether anything above them recovers — so this exists
+// solely to stop that panic from crashing the whole worker process (a
+// long-running worker that dies on one bad step is not durable), not to
+// redo the rollback.
+func (w *Worker) claimOnceRecovered(ctx context.Context) (claimed bool, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("entflow/worker: recovered panic in claim-execute-advance: %v", r)
+		}
+	}()
+	return w.ClaimOnce(ctx)
 }
 
 // Shutdown is a placeholder in this tracer plan — real drain semantics

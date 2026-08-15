@@ -104,6 +104,26 @@ func startContainer(t *testing.T) {
 // not an absence of Docker.
 func Start(t *testing.T) *ent.Client {
 	t.Helper()
+	clients := StartN(t, 1)
+	return clients[0]
+}
+
+// StartN returns n ready *ent.Client values, each its own independent
+// connection pool (the same shape N separate worker processes would each
+// open in production), all backed by the SAME fresh Postgres schema — what a
+// multiple-workers-against-one-database test needs
+// (worker/worker_test.go's TestTwoWorkers) that a fresh schema per client
+// would defeat. Migration (client.Schema.Create) runs exactly once, through
+// the first client; the schema and every client are torn down via
+// t.Cleanup.
+//
+// See Start's doc comment for the Docker-availability/skip-vs-fail contract
+// — identical here.
+func StartN(t *testing.T, n int) []*ent.Client {
+	t.Helper()
+	if n < 1 {
+		t.Fatalf("pgtest: StartN: n must be at least 1, got %d", n)
+	}
 
 	startContainer(t)
 	if containerErr != nil {
@@ -131,25 +151,31 @@ func Start(t *testing.T) *ent.Client {
 	// qualifier — resolves against this test's own isolated schema.
 	testDSN := baseDSN + "&search_path=" + schemaName
 
-	db, err := sql.Open("pgx", testDSN)
-	if err != nil {
-		t.Fatalf("pgtest: opening test connection: %v", err)
+	clients := make([]*ent.Client, n)
+	for i := 0; i < n; i++ {
+		db, err := sql.Open("pgx", testDSN)
+		if err != nil {
+			t.Fatalf("pgtest: opening test connection %d: %v", i, err)
+		}
+		t.Cleanup(func() {
+			_ = db.Close()
+		})
+
+		drv := entsql.OpenDB(dialect.Postgres, db)
+		client := ent.NewClient(ent.Driver(drv))
+		t.Cleanup(func() {
+			_ = client.Close()
+		})
+
+		if i == 0 {
+			if err := client.Schema.Create(ctx); err != nil {
+				t.Fatalf("pgtest: migrating schema %s: %v", schemaName, err)
+			}
+		}
+		clients[i] = client
 	}
-	t.Cleanup(func() {
-		_ = db.Close()
-	})
 
-	drv := entsql.OpenDB(dialect.Postgres, db)
-	client := ent.NewClient(ent.Driver(drv))
-	t.Cleanup(func() {
-		_ = client.Close()
-	})
-
-	if err := client.Schema.Create(ctx); err != nil {
-		t.Fatalf("pgtest: migrating schema %s: %v", schemaName, err)
-	}
-
-	return client
+	return clients
 }
 
 // freshSchemaName derives a unique, valid Postgres identifier from t's name
