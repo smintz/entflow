@@ -335,7 +335,8 @@ func (c *CancelOrderFlowRunClient) QueryOwner(_m *CancelOrderFlowRun) *OrderQuer
 
 // Hooks returns the client hooks.
 func (c *CancelOrderFlowRunClient) Hooks() []Hook {
-	return c.hooks.CancelOrderFlowRun
+	hooks := c.hooks.CancelOrderFlowRun
+	return append(hooks[:len(hooks):len(hooks)], cancelorderflowrun.Hooks[:]...)
 }
 
 // Interceptors returns the client interceptors.

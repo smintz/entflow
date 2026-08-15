@@ -66,11 +66,25 @@ type Options struct {
 	// outcome D-30 gives a crash. Defaults to DefaultDrainTimeout.
 	DrainTimeout time.Duration
 
-	// Context, when non-nil, derives the context each claimed step's
-	// closure runs under from the worker's own polling context — the seam
-	// an application uses to attach its own privileged viewer (D-45: the
-	// worker obtains its own viewer this way, since entflow core cannot
-	// name the application's viewer type) or other request-scoped values.
+	// Context, when non-nil, derives the context every claim's own
+	// transaction — the claim query, hydrating the run, every step
+	// closure, and the progress-pointer write — runs under, from the
+	// worker's own polling context. This is the seam an application uses
+	// to attach its own privileged viewer (D-45: the worker obtains its
+	// own viewer this way, since entflow core cannot name the
+	// application's viewer type) or other request-scoped values. It runs
+	// BEFORE the workflow marker is applied to its result (D-44), so the
+	// hook itself can never observe or forge the marker.
+	//
+	// A worker running against a run entity governed by a privacy Policy()
+	// needs one: with Context left nil, every claim runs under whatever
+	// viewer (if any) the caller's own ctx already carries, which for a
+	// typical poll-loop context (context.Background(), or a
+	// shutdown-signal context) is none at all. A Policy() that denies a
+	// viewer-less query or mutation will then honestly deny the worker
+	// itself — not a bug to route around, but the whole point of D-45: no
+	// entflow-supplied default viewer exists for a Policy() to
+	// accidentally trust.
 	Context func(context.Context) context.Context
 
 	// TracerProvider will supply the OpenTelemetry TracerProvider per-run

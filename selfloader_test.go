@@ -118,7 +118,7 @@ func newSelfLoaderWorker(t *testing.T, eng *entflow.Engine) *worker.Worker {
 // claim — a fresh, live re-read inside the current claim's own transaction,
 // never a cached or persisted value.
 func TestSelfIsLiveAcrossClaims(t *testing.T) {
-	ctx := context.Background()
+	ctx := entflowfixture.WithViewer(context.Background(), entflowfixture.AdminViewer())
 	client := entclient.New(t)
 	store := entflowfixture.New(client)
 	eng := entflow.NewEngine()
@@ -199,7 +199,7 @@ func TestNewPanicsOnSelfLoaderTypeMismatch(t *testing.T) {
 // read from the run row's self_was column across the reload, not
 // recomputed against the now-different live status.
 func TestSelfWasSnapshotSurvivesEntityMutationAndReload(t *testing.T) {
-	ctx := context.Background()
+	ctx := entflowfixture.WithViewer(context.Background(), entflowfixture.AdminViewer())
 	client := entclient.New(t)
 	store := entflowfixture.New(client)
 	eng := entflow.NewEngine()

@@ -94,7 +94,7 @@ func claimEventually(t *testing.T, ctx context.Context, w *worker.Worker, timeou
 // has no CurrentStep field to touch), so the SAME step is retried on a
 // later claim.
 func TestRetryScheduledOnRetryableError(t *testing.T) {
-	ctx := context.Background()
+	ctx := entflowfixture.WithViewer(context.Background(), entflowfixture.AdminViewer())
 	client := entclient.New(t)
 	store := entflowfixture.New(client)
 	eng := entflow.NewEngine()
@@ -130,7 +130,7 @@ func TestRetryScheduledOnRetryableError(t *testing.T) {
 // a non-empty last_error and a non-null finished_at — never retried
 // forever.
 func TestRetryFailsAtCeilingAfterExhaustingAttempts(t *testing.T) {
-	ctx := context.Background()
+	ctx := entflowfixture.WithViewer(context.Background(), entflowfixture.AdminViewer())
 	client := entclient.New(t)
 	store := entflowfixture.New(client)
 	eng := entflow.NewEngine()
@@ -164,7 +164,7 @@ func TestRetryFailsAtCeilingAfterExhaustingAttempts(t *testing.T) {
 // failed:<step> on the FIRST attempt, without ever incrementing attempt —
 // retrying a business-logic error would just burn the ceiling for nothing.
 func TestNonRetryableErrorFailsImmediately(t *testing.T) {
-	ctx := context.Background()
+	ctx := entflowfixture.WithViewer(context.Background(), entflowfixture.AdminViewer())
 	client := entclient.New(t)
 	store := entflowfixture.New(client)
 	eng := entflow.NewEngine()
@@ -196,7 +196,7 @@ func TestNonRetryableErrorFailsImmediately(t *testing.T) {
 // TestDoneRunHasEmptyLastError proves the empty edge DUR-07 names
 // explicitly: a run that reaches done never has anything in last_error.
 func TestDoneRunHasEmptyLastError(t *testing.T) {
-	ctx := context.Background()
+	ctx := entflowfixture.WithViewer(context.Background(), entflowfixture.AdminViewer())
 	client := entclient.New(t)
 	store := entflowfixture.New(client)
 	eng := entflow.NewEngine()
@@ -226,7 +226,7 @@ func TestDoneRunHasEmptyLastError(t *testing.T) {
 // recognizes — the seam a MySQL deployment (or any application) uses to
 // classify more without entflow importing another driver.
 func TestRetryableErrorHookClassifiesUnrecognizedError(t *testing.T) {
-	ctx := context.Background()
+	ctx := entflowfixture.WithViewer(context.Background(), entflowfixture.AdminViewer())
 	client := entclient.New(t)
 	store := entflowfixture.New(client)
 	eng := entflow.NewEngine()
@@ -268,7 +268,7 @@ func TestRetryableErrorHookClassifiesUnrecognizedError(t *testing.T) {
 // mirroring durablerun_test.go's TestClaimRollbackLeavesRunClaimable's
 // style of exercising the seam by hand rather than through the full worker.
 func TestGuardMissDoesNotOverwriteRun(t *testing.T) {
-	ctx := context.Background()
+	ctx := entflowfixture.WithViewer(context.Background(), entflowfixture.AdminViewer())
 	client := entclient.New(t)
 	store := entflowfixture.New(client)
 	eng := entflow.NewEngine()

@@ -23,6 +23,7 @@ import (
 	"github.com/smintz/entflow"
 	"github.com/smintz/entflow/internal/testdata/ent"
 	"github.com/smintz/entflow/internal/testdata/ent/cancelorderflowrun"
+	"github.com/smintz/entflow/internal/testdata/entflowfixture"
 	"github.com/smintz/entflow/internal/testdata/pgtest"
 	"github.com/smintz/entflow/worker"
 )
@@ -161,7 +162,7 @@ func conformanceRun(t *testing.T, ctx context.Context, client *ent.Client, state
 // IDs contains no duplicate, and every claimer either gets a distinct run or
 // observes none.
 func testNoDoubleClaim(t *testing.T, tc conformanceCase) {
-	ctx := context.Background()
+	ctx := entflowfixture.WithViewer(context.Background(), entflowfixture.AdminViewer())
 	client := tc.newClient(t)
 
 	const k = 5
@@ -267,7 +268,7 @@ func testNoDoubleClaim(t *testing.T, tc conformanceCase) {
 // rolling back the transaction, instead of committing it, leaves the row
 // exactly as claimable as it was — the next claim returns the SAME run.
 func testRollbackLeavesClaimable(t *testing.T, tc conformanceCase) {
-	ctx := context.Background()
+	ctx := entflowfixture.WithViewer(context.Background(), entflowfixture.AdminViewer())
 	client := tc.newClient(t)
 
 	run := conformanceRun(t, ctx, client, cancelorderflowrun.StatePending)

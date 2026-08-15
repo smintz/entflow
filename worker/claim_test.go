@@ -11,6 +11,7 @@ import (
 	"github.com/smintz/entflow/internal/testdata/ent"
 	"github.com/smintz/entflow/internal/testdata/ent/cancelorderflowrun"
 	"github.com/smintz/entflow/internal/testdata/ent/order"
+	"github.com/smintz/entflow/internal/testdata/entflowfixture"
 	"github.com/smintz/entflow/internal/testdata/pgtest"
 	"github.com/smintz/entflow/worker"
 )
@@ -66,7 +67,7 @@ func beginRawTx(t *testing.T, ctx context.Context, client *ent.Client) (*ent.Tx,
 // the lowest-ID claimable run among several, against real Postgres.
 func TestClaimSkipLockedClaimsLowestID(t *testing.T) {
 	pgtest.SkipUnlessDockerAvailable(t)
-	ctx := context.Background()
+	ctx := entflowfixture.WithViewer(context.Background(), entflowfixture.AdminViewer())
 	client := pgtest.Start(t)
 
 	first := newPostgresRun(t, ctx, client, cancelorderflowrun.StatePending, nil)
@@ -90,7 +91,7 @@ func TestClaimSkipLockedClaimsLowestID(t *testing.T) {
 // has passed — using the database's own clock, not the test process's.
 func TestClaimRetryAfterBoundary(t *testing.T) {
 	pgtest.SkipUnlessDockerAvailable(t)
-	ctx := context.Background()
+	ctx := entflowfixture.WithViewer(context.Background(), entflowfixture.AdminViewer())
 	client := pgtest.Start(t)
 
 	future := time.Now().Add(1 * time.Hour)
@@ -137,7 +138,7 @@ func TestClaimTerminalStatesUnclaimable(t *testing.T) {
 	for _, state := range terminalStates {
 		t.Run(string(state), func(t *testing.T) {
 			pgtest.SkipUnlessDockerAvailable(t)
-			ctx := context.Background()
+			ctx := entflowfixture.WithViewer(context.Background(), entflowfixture.AdminViewer())
 			client := pgtest.Start(t)
 
 			newPostgresRun(t, ctx, client, state, nil)

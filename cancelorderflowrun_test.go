@@ -9,6 +9,7 @@ import (
 	"github.com/smintz/entflow/internal/testdata/ent/cancelorderflowrun"
 	"github.com/smintz/entflow/internal/testdata/ent/order"
 	"github.com/smintz/entflow/internal/testdata/entclient"
+	"github.com/smintz/entflow/internal/testdata/entflowfixture"
 )
 
 // TestCancelOrderFlowRunCreatesWithOwnerEdge proves DUR-02's persisted
@@ -18,7 +19,7 @@ import (
 // back with that owner traversable — a run really is an ordinary ent row,
 // not a shape only entflow.RunMixin's builder output claims to produce.
 func TestCancelOrderFlowRunCreatesWithOwnerEdge(t *testing.T) {
-	ctx := context.Background()
+	ctx := entflowfixture.WithViewer(context.Background(), entflowfixture.AdminViewer())
 	client := entclient.New(t)
 
 	owner, err := client.Order.Create().

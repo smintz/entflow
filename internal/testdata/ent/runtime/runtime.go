@@ -3,11 +3,15 @@
 package runtime
 
 import (
+	"context"
 	"time"
 
 	"github.com/smintz/entflow/internal/testdata/ent/cancelorderflowrun"
 	"github.com/smintz/entflow/internal/testdata/ent/order"
 	"github.com/smintz/entflow/internal/testdata/ent/schema"
+
+	"entgo.io/ent"
+	"entgo.io/ent/privacy"
 )
 
 // The init function reads all schema descriptors with runtime code
@@ -15,6 +19,15 @@ import (
 // to their package variables.
 func init() {
 	cancelorderflowrunMixin := schema.CancelOrderFlowRun{}.Mixin()
+	cancelorderflowrun.Policy = privacy.NewPolicies(schema.CancelOrderFlowRun{})
+	cancelorderflowrun.Hooks[0] = func(next ent.Mutator) ent.Mutator {
+		return ent.MutateFunc(func(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+			if err := cancelorderflowrun.Policy.EvalMutation(ctx, m); err != nil {
+				return nil, err
+			}
+			return next.Mutate(ctx, m)
+		})
+	}
 	cancelorderflowrunMixinFields0 := cancelorderflowrunMixin[0].Fields()
 	_ = cancelorderflowrunMixinFields0
 	cancelorderflowrunFields := schema.CancelOrderFlowRun{}.Fields()

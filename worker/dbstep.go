@@ -47,13 +47,27 @@ func claimOnce(ctx context.Context, store entflow.RunStore, runner entflow.Runne
 		}
 	}()
 
-	// The claim transaction's context derivation (D-44): the workflow
-	// marker is applied exactly once, here, immediately after the
-	// transaction opens and before the run is hydrated — so every hook,
-	// privacy rule and step closure that runs inside this claim sees it,
-	// and nothing outside a claim does. This is the ONLY call to the
-	// internal package's setter anywhere in the module, enforced by
-	// marker_test.go's AST scan (TestWorkflowMarkerHasExactlyOneSetter).
+	// The claim transaction's context derivation (D-44/D-45), immediately
+	// after the transaction opens and before the run is hydrated — so
+	// every hook, privacy rule and step closure that runs inside this
+	// claim sees the result. Order is load-bearing and deliberate: the
+	// application's Options.Context hook runs FIRST, deriving whatever
+	// privileged viewer-bearing context the worker needs to touch a
+	// privacy-governed entity at all; the workflow marker is applied to
+	// THAT result, last, so the hook itself can never observe or forge the
+	// marker it has not yet been given. A hook that could see the marker
+	// could branch on it, which is the beginning of the escalation path
+	// D-44 closes. When Options.Context is nil, ctx passes through
+	// unchanged — a worker running against a privacy-governed entity with
+	// no hook configured is honestly denied by that entity's own Policy(),
+	// not silently granted access it was never given (see Options.Context's
+	// own doc comment).
+	if opts.Context != nil {
+		ctx = opts.Context(ctx)
+	}
+	// This is the ONLY call to the internal package's setter anywhere in
+	// the module, enforced by marker_test.go's AST scan
+	// (TestWorkflowMarkerHasExactlyOneSetter).
 	ctx = wfmarker.Set(ctx)
 
 	q, ok := txAny.(entflow.RawQuerier)

@@ -90,7 +90,7 @@ func newAllSkippedFlow() *entflow.FlowOf[*fixtureInput] {
 // step's closure inside one transaction, and carries to the done state,
 // with the owning Order mutated.
 func TestDurableRunReachesDone(t *testing.T) {
-	ctx := context.Background()
+	ctx := entflowfixture.WithViewer(context.Background(), entflowfixture.AdminViewer())
 	client := entclient.New(t)
 	store := entflowfixture.New(client)
 	eng := entflow.NewEngine()
@@ -155,7 +155,7 @@ func TestDurableRunReachesDone(t *testing.T) {
 // worker/dbstep.go composes, so the test can stop short of the commit
 // dbstep.go always performs.
 func TestClaimRollbackLeavesRunClaimable(t *testing.T) {
-	ctx := context.Background()
+	ctx := entflowfixture.WithViewer(context.Background(), entflowfixture.AdminViewer())
 	client := entclient.New(t)
 	store := entflowfixture.New(client)
 	eng := entflow.NewEngine()
@@ -214,7 +214,7 @@ func TestClaimRollbackLeavesRunClaimable(t *testing.T) {
 // step flow needs exactly two successful claims to reach done, and the run
 // is claimable between them.
 func TestRunAdvancesOneStepPerClaim(t *testing.T) {
-	ctx := context.Background()
+	ctx := entflowfixture.WithViewer(context.Background(), entflowfixture.AdminViewer())
 	client := entclient.New(t)
 	store := entflowfixture.New(client)
 	eng := entflow.NewEngine()
@@ -262,7 +262,7 @@ func TestRunAdvancesOneStepPerClaim(t *testing.T) {
 // every remaining step's condition evaluates false advances to done without
 // invoking any step closure and records no result.
 func TestAllStepsSkippedReachesDone(t *testing.T) {
-	ctx := context.Background()
+	ctx := entflowfixture.WithViewer(context.Background(), entflowfixture.AdminViewer())
 	client := entclient.New(t)
 	store := entflowfixture.New(client)
 	eng := entflow.NewEngine()

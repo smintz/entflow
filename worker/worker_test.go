@@ -157,7 +157,7 @@ func waitForDone(t *testing.T, ctx context.Context, client *ent.Client, ids []in
 // step-effect mutation per run — never more.
 func TestWorkerConcurrency(t *testing.T) {
 	pgtest.SkipUnlessDockerAvailable(t)
-	ctx := context.Background()
+	ctx := entflowfixture.WithViewer(context.Background(), entflowfixture.AdminViewer())
 	client := pgtest.Start(t)
 	store := entflowfixture.New(client)
 	eng := entflow.NewEngine()
@@ -210,7 +210,7 @@ func TestWorkerConcurrency(t *testing.T) {
 // coordination beyond the row lock (DUR-04's user story).
 func TestTwoWorkers(t *testing.T) {
 	pgtest.SkipUnlessDockerAvailable(t)
-	ctx := context.Background()
+	ctx := entflowfixture.WithViewer(context.Background(), entflowfixture.AdminViewer())
 	clients := pgtest.StartN(t, 2)
 	client1, client2 := clients[0], clients[1]
 
@@ -270,7 +270,7 @@ func TestTwoWorkers(t *testing.T) {
 // claimer shape plan 02-02 proved.
 func TestPanickingStep(t *testing.T) {
 	pgtest.SkipUnlessDockerAvailable(t)
-	ctx := context.Background()
+	ctx := entflowfixture.WithViewer(context.Background(), entflowfixture.AdminViewer())
 	client := pgtest.Start(t)
 	store := entflowfixture.New(client)
 	eng := entflow.NewEngine()

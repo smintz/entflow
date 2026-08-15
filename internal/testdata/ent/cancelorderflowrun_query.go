@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 
@@ -363,6 +364,12 @@ func (_q *CancelOrderFlowRunQuery) prepareQuery(ctx context.Context) error {
 			return err
 		}
 		_q.sql = prev
+	}
+	if cancelorderflowrun.Policy == nil {
+		return errors.New("ent: uninitialized cancelorderflowrun.Policy (forgotten import ent/runtime?)")
+	}
+	if err := cancelorderflowrun.Policy.EvalQuery(ctx, _q); err != nil {
+		return err
 	}
 	return nil
 }
