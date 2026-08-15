@@ -32,10 +32,19 @@ import (
 // auto-migrated. The driver name registered by modernc.org/sqlite is
 // "sqlite" — NOT "sqlite3", which is the CGo mattn/go-sqlite3 driver's name
 // and the single most likely copy-paste mistake here.
+//
+// The DSN's _txlock=immediate is Phase 2's requirement, not Phase 1's: it
+// makes every transaction opened against this client BEGIN IMMEDIATE,
+// reserving SQLite's write lock at BEGIN time rather than at the first
+// write. worker.SQLiteStrategy's claim query is a bare SELECT — without
+// immediate mode, two concurrent claim transactions could both observe the
+// same row as claimable before either issues a write, since a plain read
+// takes no lock under SQLite's default deferred mode. Harmless for Phase
+// 1's single-goroutine tests.
 func New(t *testing.T) *ent.Client {
 	t.Helper()
 
-	db, err := sql.Open("sqlite", "file:entflow?mode=memory&cache=shared&_fk=1")
+	db, err := sql.Open("sqlite", "file:entflow?mode=memory&cache=shared&_fk=1&_txlock=immediate")
 	if err != nil {
 		t.Fatalf("entclient: opening sqlite: %v", err)
 	}
