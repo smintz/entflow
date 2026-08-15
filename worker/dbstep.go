@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/smintz/entflow"
+	"github.com/smintz/entflow/internal/wfmarker"
 )
 
 // claimStates are the two run states a claim query considers (D-32). done,
@@ -45,6 +46,15 @@ func claimOnce(ctx context.Context, store entflow.RunStore, runner entflow.Runne
 			_ = tx.Rollback()
 		}
 	}()
+
+	// The claim transaction's context derivation (D-44): the workflow
+	// marker is applied exactly once, here, immediately after the
+	// transaction opens and before the run is hydrated — so every hook,
+	// privacy rule and step closure that runs inside this claim sees it,
+	// and nothing outside a claim does. This is the ONLY call to the
+	// internal package's setter anywhere in the module, enforced by
+	// marker_test.go's AST scan (TestWorkflowMarkerHasExactlyOneSetter).
+	ctx = wfmarker.Set(ctx)
 
 	q, ok := txAny.(entflow.RawQuerier)
 	if !ok {
