@@ -7,6 +7,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 )
 
 const (
@@ -18,8 +19,17 @@ const (
 	FieldPaymentIntentID = "payment_intent_id"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
+	// EdgeRuns holds the string denoting the runs edge name in mutations.
+	EdgeRuns = "runs"
 	// Table holds the table name of the order in the database.
 	Table = "orders"
+	// RunsTable is the table that holds the runs relation/edge.
+	RunsTable = "cancel_order_flow_runs"
+	// RunsInverseTable is the table name for the CancelOrderFlowRun entity.
+	// It exists in this package in order to avoid circular dependency with the "cancelorderflowrun" package.
+	RunsInverseTable = "cancel_order_flow_runs"
+	// RunsColumn is the table column denoting the runs relation/edge.
+	RunsColumn = "cancel_order_flow_run_owner"
 )
 
 // Columns holds all SQL columns for order fields.
@@ -94,4 +104,25 @@ func ByPaymentIntentID(opts ...sql.OrderTermOption) OrderOption {
 // ByStatus orders the results by the status field.
 func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
+}
+
+// ByRunsCount orders the results by runs count.
+func ByRunsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newRunsStep(), opts...)
+	}
+}
+
+// ByRuns orders the results by runs terms.
+func ByRuns(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newRunsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newRunsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(RunsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, RunsTable, RunsColumn),
+	)
 }

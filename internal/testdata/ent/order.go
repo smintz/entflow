@@ -19,8 +19,29 @@ type Order struct {
 	// PaymentIntentID holds the value of the "payment_intent_id" field.
 	PaymentIntentID string `json:"payment_intent_id,omitempty"`
 	// Status holds the value of the "status" field.
-	Status       order.Status `json:"status,omitempty"`
+	Status order.Status `json:"status,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the OrderQuery when eager-loading is set.
+	Edges        OrderEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// OrderEdges holds the relations/edges for other nodes in the graph.
+type OrderEdges struct {
+	// Runs holds the value of the runs edge.
+	Runs []*CancelOrderFlowRun `json:"runs,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// RunsOrErr returns the Runs value or an error if the edge
+// was not loaded in eager-loading.
+func (e OrderEdges) RunsOrErr() ([]*CancelOrderFlowRun, error) {
+	if e.loadedTypes[0] {
+		return e.Runs, nil
+	}
+	return nil, &NotLoadedError{edge: "runs"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -76,6 +97,11 @@ func (_m *Order) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *Order) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryRuns queries the "runs" edge of the Order entity.
+func (_m *Order) QueryRuns() *CancelOrderFlowRunQuery {
+	return NewOrderClient(_m.config).QueryRuns(_m)
 }
 
 // Update returns a builder for updating this Order.

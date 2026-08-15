@@ -14,6 +14,8 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/smintz/entflow/internal/testdata/ent/cancelorderflowrun"
 	"github.com/smintz/entflow/internal/testdata/ent/order"
 
 	stdsql "database/sql"
@@ -24,6 +26,8 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// CancelOrderFlowRun is the client for interacting with the CancelOrderFlowRun builders.
+	CancelOrderFlowRun *CancelOrderFlowRunClient
 	// Order is the client for interacting with the Order builders.
 	Order *OrderClient
 }
@@ -37,6 +41,7 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.CancelOrderFlowRun = NewCancelOrderFlowRunClient(c.config)
 	c.Order = NewOrderClient(c.config)
 }
 
@@ -128,9 +133,10 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:    ctx,
-		config: cfg,
-		Order:  NewOrderClient(cfg),
+		ctx:                ctx,
+		config:             cfg,
+		CancelOrderFlowRun: NewCancelOrderFlowRunClient(cfg),
+		Order:              NewOrderClient(cfg),
 	}, nil
 }
 
@@ -148,16 +154,17 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:    ctx,
-		config: cfg,
-		Order:  NewOrderClient(cfg),
+		ctx:                ctx,
+		config:             cfg,
+		CancelOrderFlowRun: NewCancelOrderFlowRunClient(cfg),
+		Order:              NewOrderClient(cfg),
 	}, nil
 }
 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		Order.
+//		CancelOrderFlowRun.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -179,22 +186,175 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
+	c.CancelOrderFlowRun.Use(hooks...)
 	c.Order.Use(hooks...)
 }
 
 // Intercept adds the query interceptors to all the entity clients.
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
+	c.CancelOrderFlowRun.Intercept(interceptors...)
 	c.Order.Intercept(interceptors...)
 }
 
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
+	case *CancelOrderFlowRunMutation:
+		return c.CancelOrderFlowRun.mutate(ctx, m)
 	case *OrderMutation:
 		return c.Order.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
+// CancelOrderFlowRunClient is a client for the CancelOrderFlowRun schema.
+type CancelOrderFlowRunClient struct {
+	config
+}
+
+// NewCancelOrderFlowRunClient returns a client for the CancelOrderFlowRun from the given config.
+func NewCancelOrderFlowRunClient(c config) *CancelOrderFlowRunClient {
+	return &CancelOrderFlowRunClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `cancelorderflowrun.Hooks(f(g(h())))`.
+func (c *CancelOrderFlowRunClient) Use(hooks ...Hook) {
+	c.hooks.CancelOrderFlowRun = append(c.hooks.CancelOrderFlowRun, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `cancelorderflowrun.Intercept(f(g(h())))`.
+func (c *CancelOrderFlowRunClient) Intercept(interceptors ...Interceptor) {
+	c.inters.CancelOrderFlowRun = append(c.inters.CancelOrderFlowRun, interceptors...)
+}
+
+// Create returns a builder for creating a CancelOrderFlowRun entity.
+func (c *CancelOrderFlowRunClient) Create() *CancelOrderFlowRunCreate {
+	mutation := newCancelOrderFlowRunMutation(c.config, OpCreate)
+	return &CancelOrderFlowRunCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of CancelOrderFlowRun entities.
+func (c *CancelOrderFlowRunClient) CreateBulk(builders ...*CancelOrderFlowRunCreate) *CancelOrderFlowRunCreateBulk {
+	return &CancelOrderFlowRunCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *CancelOrderFlowRunClient) MapCreateBulk(slice any, setFunc func(*CancelOrderFlowRunCreate, int)) *CancelOrderFlowRunCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &CancelOrderFlowRunCreateBulk{err: fmt.Errorf("calling to CancelOrderFlowRunClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*CancelOrderFlowRunCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &CancelOrderFlowRunCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for CancelOrderFlowRun.
+func (c *CancelOrderFlowRunClient) Update() *CancelOrderFlowRunUpdate {
+	mutation := newCancelOrderFlowRunMutation(c.config, OpUpdate)
+	return &CancelOrderFlowRunUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *CancelOrderFlowRunClient) UpdateOne(_m *CancelOrderFlowRun) *CancelOrderFlowRunUpdateOne {
+	mutation := newCancelOrderFlowRunMutation(c.config, OpUpdateOne, withCancelOrderFlowRun(_m))
+	return &CancelOrderFlowRunUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *CancelOrderFlowRunClient) UpdateOneID(id int) *CancelOrderFlowRunUpdateOne {
+	mutation := newCancelOrderFlowRunMutation(c.config, OpUpdateOne, withCancelOrderFlowRunID(id))
+	return &CancelOrderFlowRunUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for CancelOrderFlowRun.
+func (c *CancelOrderFlowRunClient) Delete() *CancelOrderFlowRunDelete {
+	mutation := newCancelOrderFlowRunMutation(c.config, OpDelete)
+	return &CancelOrderFlowRunDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *CancelOrderFlowRunClient) DeleteOne(_m *CancelOrderFlowRun) *CancelOrderFlowRunDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *CancelOrderFlowRunClient) DeleteOneID(id int) *CancelOrderFlowRunDeleteOne {
+	builder := c.Delete().Where(cancelorderflowrun.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &CancelOrderFlowRunDeleteOne{builder}
+}
+
+// Query returns a query builder for CancelOrderFlowRun.
+func (c *CancelOrderFlowRunClient) Query() *CancelOrderFlowRunQuery {
+	return &CancelOrderFlowRunQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeCancelOrderFlowRun},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a CancelOrderFlowRun entity by its id.
+func (c *CancelOrderFlowRunClient) Get(ctx context.Context, id int) (*CancelOrderFlowRun, error) {
+	return c.Query().Where(cancelorderflowrun.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *CancelOrderFlowRunClient) GetX(ctx context.Context, id int) *CancelOrderFlowRun {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryOwner queries the owner edge of a CancelOrderFlowRun.
+func (c *CancelOrderFlowRunClient) QueryOwner(_m *CancelOrderFlowRun) *OrderQuery {
+	query := (&OrderClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(cancelorderflowrun.Table, cancelorderflowrun.FieldID, id),
+			sqlgraph.To(order.Table, order.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, cancelorderflowrun.OwnerTable, cancelorderflowrun.OwnerColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *CancelOrderFlowRunClient) Hooks() []Hook {
+	return c.hooks.CancelOrderFlowRun
+}
+
+// Interceptors returns the client interceptors.
+func (c *CancelOrderFlowRunClient) Interceptors() []Interceptor {
+	return c.inters.CancelOrderFlowRun
+}
+
+func (c *CancelOrderFlowRunClient) mutate(ctx context.Context, m *CancelOrderFlowRunMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&CancelOrderFlowRunCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&CancelOrderFlowRunUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&CancelOrderFlowRunUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&CancelOrderFlowRunDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown CancelOrderFlowRun mutation op: %q", m.Op())
 	}
 }
 
@@ -306,6 +466,22 @@ func (c *OrderClient) GetX(ctx context.Context, id int) *Order {
 	return obj
 }
 
+// QueryRuns queries the runs edge of a Order.
+func (c *OrderClient) QueryRuns(_m *Order) *CancelOrderFlowRunQuery {
+	query := (&CancelOrderFlowRunClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(order.Table, order.FieldID, id),
+			sqlgraph.To(cancelorderflowrun.Table, cancelorderflowrun.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, order.RunsTable, order.RunsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *OrderClient) Hooks() []Hook {
 	hooks := c.hooks.Order
@@ -335,10 +511,10 @@ func (c *OrderClient) mutate(ctx context.Context, m *OrderMutation) (Value, erro
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Order []ent.Hook
+		CancelOrderFlowRun, Order []ent.Hook
 	}
 	inters struct {
-		Order []ent.Interceptor
+		CancelOrderFlowRun, Order []ent.Interceptor
 	}
 )
 

@@ -2,6 +2,7 @@ package schema
 
 import (
 	"entgo.io/ent"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 
 	"github.com/smintz/entflow"
@@ -30,6 +31,17 @@ func (Order) Fields() []ent.Field {
 				"paid":    {"shipped", "cancelled"},
 				"shipped": {"delivered"},
 			})),
+	}
+}
+
+// Edges of the Order.
+func (Order) Edges() []ent.Edge {
+	return []ent.Edge{
+		// runs is the inverse of CancelOrderFlowRun's "owner" edge — the
+		// D-26 lineage edge a run row carries back to the aggregate it
+		// belongs to.
+		edge.From("runs", CancelOrderFlowRun.Type).
+			Ref("owner"),
 	}
 }
 

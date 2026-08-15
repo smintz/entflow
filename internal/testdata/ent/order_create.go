@@ -9,6 +9,7 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/smintz/entflow/internal/testdata/ent/cancelorderflowrun"
 	"github.com/smintz/entflow/internal/testdata/ent/order"
 )
 
@@ -45,6 +46,21 @@ func (_c *OrderCreate) SetNillableStatus(v *order.Status) *OrderCreate {
 		_c.SetStatus(*v)
 	}
 	return _c
+}
+
+// AddRunIDs adds the "runs" edge to the CancelOrderFlowRun entity by IDs.
+func (_c *OrderCreate) AddRunIDs(ids ...int) *OrderCreate {
+	_c.mutation.AddRunIDs(ids...)
+	return _c
+}
+
+// AddRuns adds the "runs" edges to the CancelOrderFlowRun entity.
+func (_c *OrderCreate) AddRuns(v ...*CancelOrderFlowRun) *OrderCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddRunIDs(ids...)
 }
 
 // Mutation returns the OrderMutation object of the builder.
@@ -134,6 +150,22 @@ func (_c *OrderCreate) createSpec() (*Order, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(order.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
+	}
+	if nodes := _c.mutation.RunsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   order.RunsTable,
+			Columns: []string{order.RunsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(cancelorderflowrun.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

@@ -4,6 +4,7 @@ package order
 
 import (
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/smintz/entflow/internal/testdata/ent/predicate"
 )
 
@@ -150,6 +151,29 @@ func StatusIn(vs ...Status) predicate.Order {
 // StatusNotIn applies the NotIn predicate on the "status" field.
 func StatusNotIn(vs ...Status) predicate.Order {
 	return predicate.Order(sql.FieldNotIn(FieldStatus, vs...))
+}
+
+// HasRuns applies the HasEdge predicate on the "runs" edge.
+func HasRuns() predicate.Order {
+	return predicate.Order(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, RunsTable, RunsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasRunsWith applies the HasEdge predicate on the "runs" edge with a given conditions (other predicates).
+func HasRunsWith(preds ...predicate.CancelOrderFlowRun) predicate.Order {
+	return predicate.Order(func(s *sql.Selector) {
+		step := newRunsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

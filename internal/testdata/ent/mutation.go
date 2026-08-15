@@ -4,12 +4,15 @@ package ent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/smintz/entflow/internal/testdata/ent/cancelorderflowrun"
 	"github.com/smintz/entflow/internal/testdata/ent/order"
 	"github.com/smintz/entflow/internal/testdata/ent/predicate"
 )
@@ -23,8 +26,1241 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeOrder = "Order"
+	TypeCancelOrderFlowRun = "CancelOrderFlowRun"
+	TypeOrder              = "Order"
 )
+
+// CancelOrderFlowRunMutation represents an operation that mutates the CancelOrderFlowRun nodes in the graph.
+type CancelOrderFlowRunMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *int
+	state         *cancelorderflowrun.State
+	input         *[]byte
+	current_step  *string
+	attempt       *int
+	addattempt    *int
+	last_error    *string
+	results       *map[string]json.RawMessage
+	retry_after   *time.Time
+	trace_context *string
+	self_was      *string
+	created_at    *time.Time
+	updated_at    *time.Time
+	started_at    *time.Time
+	finished_at   *time.Time
+	clearedFields map[string]struct{}
+	owner         *int
+	clearedowner  bool
+	done          bool
+	oldValue      func(context.Context) (*CancelOrderFlowRun, error)
+	predicates    []predicate.CancelOrderFlowRun
+}
+
+var _ ent.Mutation = (*CancelOrderFlowRunMutation)(nil)
+
+// cancelorderflowrunOption allows management of the mutation configuration using functional options.
+type cancelorderflowrunOption func(*CancelOrderFlowRunMutation)
+
+// newCancelOrderFlowRunMutation creates new mutation for the CancelOrderFlowRun entity.
+func newCancelOrderFlowRunMutation(c config, op Op, opts ...cancelorderflowrunOption) *CancelOrderFlowRunMutation {
+	m := &CancelOrderFlowRunMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeCancelOrderFlowRun,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withCancelOrderFlowRunID sets the ID field of the mutation.
+func withCancelOrderFlowRunID(id int) cancelorderflowrunOption {
+	return func(m *CancelOrderFlowRunMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *CancelOrderFlowRun
+		)
+		m.oldValue = func(ctx context.Context) (*CancelOrderFlowRun, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().CancelOrderFlowRun.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withCancelOrderFlowRun sets the old CancelOrderFlowRun of the mutation.
+func withCancelOrderFlowRun(node *CancelOrderFlowRun) cancelorderflowrunOption {
+	return func(m *CancelOrderFlowRunMutation) {
+		m.oldValue = func(context.Context) (*CancelOrderFlowRun, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m CancelOrderFlowRunMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m CancelOrderFlowRunMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *CancelOrderFlowRunMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *CancelOrderFlowRunMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().CancelOrderFlowRun.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetState sets the "state" field.
+func (m *CancelOrderFlowRunMutation) SetState(c cancelorderflowrun.State) {
+	m.state = &c
+}
+
+// State returns the value of the "state" field in the mutation.
+func (m *CancelOrderFlowRunMutation) State() (r cancelorderflowrun.State, exists bool) {
+	v := m.state
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldState returns the old "state" field's value of the CancelOrderFlowRun entity.
+// If the CancelOrderFlowRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CancelOrderFlowRunMutation) OldState(ctx context.Context) (v cancelorderflowrun.State, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldState is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldState requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldState: %w", err)
+	}
+	return oldValue.State, nil
+}
+
+// ResetState resets all changes to the "state" field.
+func (m *CancelOrderFlowRunMutation) ResetState() {
+	m.state = nil
+}
+
+// SetInput sets the "input" field.
+func (m *CancelOrderFlowRunMutation) SetInput(b []byte) {
+	m.input = &b
+}
+
+// Input returns the value of the "input" field in the mutation.
+func (m *CancelOrderFlowRunMutation) Input() (r []byte, exists bool) {
+	v := m.input
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInput returns the old "input" field's value of the CancelOrderFlowRun entity.
+// If the CancelOrderFlowRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CancelOrderFlowRunMutation) OldInput(ctx context.Context) (v []byte, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInput is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInput requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInput: %w", err)
+	}
+	return oldValue.Input, nil
+}
+
+// ResetInput resets all changes to the "input" field.
+func (m *CancelOrderFlowRunMutation) ResetInput() {
+	m.input = nil
+}
+
+// SetCurrentStep sets the "current_step" field.
+func (m *CancelOrderFlowRunMutation) SetCurrentStep(s string) {
+	m.current_step = &s
+}
+
+// CurrentStep returns the value of the "current_step" field in the mutation.
+func (m *CancelOrderFlowRunMutation) CurrentStep() (r string, exists bool) {
+	v := m.current_step
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCurrentStep returns the old "current_step" field's value of the CancelOrderFlowRun entity.
+// If the CancelOrderFlowRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CancelOrderFlowRunMutation) OldCurrentStep(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCurrentStep is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCurrentStep requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCurrentStep: %w", err)
+	}
+	return oldValue.CurrentStep, nil
+}
+
+// ClearCurrentStep clears the value of the "current_step" field.
+func (m *CancelOrderFlowRunMutation) ClearCurrentStep() {
+	m.current_step = nil
+	m.clearedFields[cancelorderflowrun.FieldCurrentStep] = struct{}{}
+}
+
+// CurrentStepCleared returns if the "current_step" field was cleared in this mutation.
+func (m *CancelOrderFlowRunMutation) CurrentStepCleared() bool {
+	_, ok := m.clearedFields[cancelorderflowrun.FieldCurrentStep]
+	return ok
+}
+
+// ResetCurrentStep resets all changes to the "current_step" field.
+func (m *CancelOrderFlowRunMutation) ResetCurrentStep() {
+	m.current_step = nil
+	delete(m.clearedFields, cancelorderflowrun.FieldCurrentStep)
+}
+
+// SetAttempt sets the "attempt" field.
+func (m *CancelOrderFlowRunMutation) SetAttempt(i int) {
+	m.attempt = &i
+	m.addattempt = nil
+}
+
+// Attempt returns the value of the "attempt" field in the mutation.
+func (m *CancelOrderFlowRunMutation) Attempt() (r int, exists bool) {
+	v := m.attempt
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAttempt returns the old "attempt" field's value of the CancelOrderFlowRun entity.
+// If the CancelOrderFlowRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CancelOrderFlowRunMutation) OldAttempt(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAttempt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAttempt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAttempt: %w", err)
+	}
+	return oldValue.Attempt, nil
+}
+
+// AddAttempt adds i to the "attempt" field.
+func (m *CancelOrderFlowRunMutation) AddAttempt(i int) {
+	if m.addattempt != nil {
+		*m.addattempt += i
+	} else {
+		m.addattempt = &i
+	}
+}
+
+// AddedAttempt returns the value that was added to the "attempt" field in this mutation.
+func (m *CancelOrderFlowRunMutation) AddedAttempt() (r int, exists bool) {
+	v := m.addattempt
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAttempt resets all changes to the "attempt" field.
+func (m *CancelOrderFlowRunMutation) ResetAttempt() {
+	m.attempt = nil
+	m.addattempt = nil
+}
+
+// SetLastError sets the "last_error" field.
+func (m *CancelOrderFlowRunMutation) SetLastError(s string) {
+	m.last_error = &s
+}
+
+// LastError returns the value of the "last_error" field in the mutation.
+func (m *CancelOrderFlowRunMutation) LastError() (r string, exists bool) {
+	v := m.last_error
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastError returns the old "last_error" field's value of the CancelOrderFlowRun entity.
+// If the CancelOrderFlowRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CancelOrderFlowRunMutation) OldLastError(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastError is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastError requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastError: %w", err)
+	}
+	return oldValue.LastError, nil
+}
+
+// ClearLastError clears the value of the "last_error" field.
+func (m *CancelOrderFlowRunMutation) ClearLastError() {
+	m.last_error = nil
+	m.clearedFields[cancelorderflowrun.FieldLastError] = struct{}{}
+}
+
+// LastErrorCleared returns if the "last_error" field was cleared in this mutation.
+func (m *CancelOrderFlowRunMutation) LastErrorCleared() bool {
+	_, ok := m.clearedFields[cancelorderflowrun.FieldLastError]
+	return ok
+}
+
+// ResetLastError resets all changes to the "last_error" field.
+func (m *CancelOrderFlowRunMutation) ResetLastError() {
+	m.last_error = nil
+	delete(m.clearedFields, cancelorderflowrun.FieldLastError)
+}
+
+// SetResults sets the "results" field.
+func (m *CancelOrderFlowRunMutation) SetResults(mm map[string]json.RawMessage) {
+	m.results = &mm
+}
+
+// Results returns the value of the "results" field in the mutation.
+func (m *CancelOrderFlowRunMutation) Results() (r map[string]json.RawMessage, exists bool) {
+	v := m.results
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResults returns the old "results" field's value of the CancelOrderFlowRun entity.
+// If the CancelOrderFlowRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CancelOrderFlowRunMutation) OldResults(ctx context.Context) (v map[string]json.RawMessage, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResults is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResults requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResults: %w", err)
+	}
+	return oldValue.Results, nil
+}
+
+// ClearResults clears the value of the "results" field.
+func (m *CancelOrderFlowRunMutation) ClearResults() {
+	m.results = nil
+	m.clearedFields[cancelorderflowrun.FieldResults] = struct{}{}
+}
+
+// ResultsCleared returns if the "results" field was cleared in this mutation.
+func (m *CancelOrderFlowRunMutation) ResultsCleared() bool {
+	_, ok := m.clearedFields[cancelorderflowrun.FieldResults]
+	return ok
+}
+
+// ResetResults resets all changes to the "results" field.
+func (m *CancelOrderFlowRunMutation) ResetResults() {
+	m.results = nil
+	delete(m.clearedFields, cancelorderflowrun.FieldResults)
+}
+
+// SetRetryAfter sets the "retry_after" field.
+func (m *CancelOrderFlowRunMutation) SetRetryAfter(t time.Time) {
+	m.retry_after = &t
+}
+
+// RetryAfter returns the value of the "retry_after" field in the mutation.
+func (m *CancelOrderFlowRunMutation) RetryAfter() (r time.Time, exists bool) {
+	v := m.retry_after
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRetryAfter returns the old "retry_after" field's value of the CancelOrderFlowRun entity.
+// If the CancelOrderFlowRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CancelOrderFlowRunMutation) OldRetryAfter(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRetryAfter is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRetryAfter requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRetryAfter: %w", err)
+	}
+	return oldValue.RetryAfter, nil
+}
+
+// ClearRetryAfter clears the value of the "retry_after" field.
+func (m *CancelOrderFlowRunMutation) ClearRetryAfter() {
+	m.retry_after = nil
+	m.clearedFields[cancelorderflowrun.FieldRetryAfter] = struct{}{}
+}
+
+// RetryAfterCleared returns if the "retry_after" field was cleared in this mutation.
+func (m *CancelOrderFlowRunMutation) RetryAfterCleared() bool {
+	_, ok := m.clearedFields[cancelorderflowrun.FieldRetryAfter]
+	return ok
+}
+
+// ResetRetryAfter resets all changes to the "retry_after" field.
+func (m *CancelOrderFlowRunMutation) ResetRetryAfter() {
+	m.retry_after = nil
+	delete(m.clearedFields, cancelorderflowrun.FieldRetryAfter)
+}
+
+// SetTraceContext sets the "trace_context" field.
+func (m *CancelOrderFlowRunMutation) SetTraceContext(s string) {
+	m.trace_context = &s
+}
+
+// TraceContext returns the value of the "trace_context" field in the mutation.
+func (m *CancelOrderFlowRunMutation) TraceContext() (r string, exists bool) {
+	v := m.trace_context
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTraceContext returns the old "trace_context" field's value of the CancelOrderFlowRun entity.
+// If the CancelOrderFlowRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CancelOrderFlowRunMutation) OldTraceContext(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTraceContext is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTraceContext requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTraceContext: %w", err)
+	}
+	return oldValue.TraceContext, nil
+}
+
+// ClearTraceContext clears the value of the "trace_context" field.
+func (m *CancelOrderFlowRunMutation) ClearTraceContext() {
+	m.trace_context = nil
+	m.clearedFields[cancelorderflowrun.FieldTraceContext] = struct{}{}
+}
+
+// TraceContextCleared returns if the "trace_context" field was cleared in this mutation.
+func (m *CancelOrderFlowRunMutation) TraceContextCleared() bool {
+	_, ok := m.clearedFields[cancelorderflowrun.FieldTraceContext]
+	return ok
+}
+
+// ResetTraceContext resets all changes to the "trace_context" field.
+func (m *CancelOrderFlowRunMutation) ResetTraceContext() {
+	m.trace_context = nil
+	delete(m.clearedFields, cancelorderflowrun.FieldTraceContext)
+}
+
+// SetSelfWas sets the "self_was" field.
+func (m *CancelOrderFlowRunMutation) SetSelfWas(s string) {
+	m.self_was = &s
+}
+
+// SelfWas returns the value of the "self_was" field in the mutation.
+func (m *CancelOrderFlowRunMutation) SelfWas() (r string, exists bool) {
+	v := m.self_was
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSelfWas returns the old "self_was" field's value of the CancelOrderFlowRun entity.
+// If the CancelOrderFlowRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CancelOrderFlowRunMutation) OldSelfWas(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSelfWas is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSelfWas requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSelfWas: %w", err)
+	}
+	return oldValue.SelfWas, nil
+}
+
+// ClearSelfWas clears the value of the "self_was" field.
+func (m *CancelOrderFlowRunMutation) ClearSelfWas() {
+	m.self_was = nil
+	m.clearedFields[cancelorderflowrun.FieldSelfWas] = struct{}{}
+}
+
+// SelfWasCleared returns if the "self_was" field was cleared in this mutation.
+func (m *CancelOrderFlowRunMutation) SelfWasCleared() bool {
+	_, ok := m.clearedFields[cancelorderflowrun.FieldSelfWas]
+	return ok
+}
+
+// ResetSelfWas resets all changes to the "self_was" field.
+func (m *CancelOrderFlowRunMutation) ResetSelfWas() {
+	m.self_was = nil
+	delete(m.clearedFields, cancelorderflowrun.FieldSelfWas)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *CancelOrderFlowRunMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *CancelOrderFlowRunMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the CancelOrderFlowRun entity.
+// If the CancelOrderFlowRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CancelOrderFlowRunMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *CancelOrderFlowRunMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *CancelOrderFlowRunMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *CancelOrderFlowRunMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the CancelOrderFlowRun entity.
+// If the CancelOrderFlowRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CancelOrderFlowRunMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *CancelOrderFlowRunMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetStartedAt sets the "started_at" field.
+func (m *CancelOrderFlowRunMutation) SetStartedAt(t time.Time) {
+	m.started_at = &t
+}
+
+// StartedAt returns the value of the "started_at" field in the mutation.
+func (m *CancelOrderFlowRunMutation) StartedAt() (r time.Time, exists bool) {
+	v := m.started_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStartedAt returns the old "started_at" field's value of the CancelOrderFlowRun entity.
+// If the CancelOrderFlowRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CancelOrderFlowRunMutation) OldStartedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStartedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStartedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStartedAt: %w", err)
+	}
+	return oldValue.StartedAt, nil
+}
+
+// ClearStartedAt clears the value of the "started_at" field.
+func (m *CancelOrderFlowRunMutation) ClearStartedAt() {
+	m.started_at = nil
+	m.clearedFields[cancelorderflowrun.FieldStartedAt] = struct{}{}
+}
+
+// StartedAtCleared returns if the "started_at" field was cleared in this mutation.
+func (m *CancelOrderFlowRunMutation) StartedAtCleared() bool {
+	_, ok := m.clearedFields[cancelorderflowrun.FieldStartedAt]
+	return ok
+}
+
+// ResetStartedAt resets all changes to the "started_at" field.
+func (m *CancelOrderFlowRunMutation) ResetStartedAt() {
+	m.started_at = nil
+	delete(m.clearedFields, cancelorderflowrun.FieldStartedAt)
+}
+
+// SetFinishedAt sets the "finished_at" field.
+func (m *CancelOrderFlowRunMutation) SetFinishedAt(t time.Time) {
+	m.finished_at = &t
+}
+
+// FinishedAt returns the value of the "finished_at" field in the mutation.
+func (m *CancelOrderFlowRunMutation) FinishedAt() (r time.Time, exists bool) {
+	v := m.finished_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFinishedAt returns the old "finished_at" field's value of the CancelOrderFlowRun entity.
+// If the CancelOrderFlowRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CancelOrderFlowRunMutation) OldFinishedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFinishedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFinishedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFinishedAt: %w", err)
+	}
+	return oldValue.FinishedAt, nil
+}
+
+// ClearFinishedAt clears the value of the "finished_at" field.
+func (m *CancelOrderFlowRunMutation) ClearFinishedAt() {
+	m.finished_at = nil
+	m.clearedFields[cancelorderflowrun.FieldFinishedAt] = struct{}{}
+}
+
+// FinishedAtCleared returns if the "finished_at" field was cleared in this mutation.
+func (m *CancelOrderFlowRunMutation) FinishedAtCleared() bool {
+	_, ok := m.clearedFields[cancelorderflowrun.FieldFinishedAt]
+	return ok
+}
+
+// ResetFinishedAt resets all changes to the "finished_at" field.
+func (m *CancelOrderFlowRunMutation) ResetFinishedAt() {
+	m.finished_at = nil
+	delete(m.clearedFields, cancelorderflowrun.FieldFinishedAt)
+}
+
+// SetOwnerID sets the "owner" edge to the Order entity by id.
+func (m *CancelOrderFlowRunMutation) SetOwnerID(id int) {
+	m.owner = &id
+}
+
+// ClearOwner clears the "owner" edge to the Order entity.
+func (m *CancelOrderFlowRunMutation) ClearOwner() {
+	m.clearedowner = true
+}
+
+// OwnerCleared reports if the "owner" edge to the Order entity was cleared.
+func (m *CancelOrderFlowRunMutation) OwnerCleared() bool {
+	return m.clearedowner
+}
+
+// OwnerID returns the "owner" edge ID in the mutation.
+func (m *CancelOrderFlowRunMutation) OwnerID() (id int, exists bool) {
+	if m.owner != nil {
+		return *m.owner, true
+	}
+	return
+}
+
+// OwnerIDs returns the "owner" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// OwnerID instead. It exists only for internal usage by the builders.
+func (m *CancelOrderFlowRunMutation) OwnerIDs() (ids []int) {
+	if id := m.owner; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetOwner resets all changes to the "owner" edge.
+func (m *CancelOrderFlowRunMutation) ResetOwner() {
+	m.owner = nil
+	m.clearedowner = false
+}
+
+// Where appends a list predicates to the CancelOrderFlowRunMutation builder.
+func (m *CancelOrderFlowRunMutation) Where(ps ...predicate.CancelOrderFlowRun) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the CancelOrderFlowRunMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *CancelOrderFlowRunMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.CancelOrderFlowRun, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *CancelOrderFlowRunMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *CancelOrderFlowRunMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (CancelOrderFlowRun).
+func (m *CancelOrderFlowRunMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *CancelOrderFlowRunMutation) Fields() []string {
+	fields := make([]string, 0, 13)
+	if m.state != nil {
+		fields = append(fields, cancelorderflowrun.FieldState)
+	}
+	if m.input != nil {
+		fields = append(fields, cancelorderflowrun.FieldInput)
+	}
+	if m.current_step != nil {
+		fields = append(fields, cancelorderflowrun.FieldCurrentStep)
+	}
+	if m.attempt != nil {
+		fields = append(fields, cancelorderflowrun.FieldAttempt)
+	}
+	if m.last_error != nil {
+		fields = append(fields, cancelorderflowrun.FieldLastError)
+	}
+	if m.results != nil {
+		fields = append(fields, cancelorderflowrun.FieldResults)
+	}
+	if m.retry_after != nil {
+		fields = append(fields, cancelorderflowrun.FieldRetryAfter)
+	}
+	if m.trace_context != nil {
+		fields = append(fields, cancelorderflowrun.FieldTraceContext)
+	}
+	if m.self_was != nil {
+		fields = append(fields, cancelorderflowrun.FieldSelfWas)
+	}
+	if m.created_at != nil {
+		fields = append(fields, cancelorderflowrun.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, cancelorderflowrun.FieldUpdatedAt)
+	}
+	if m.started_at != nil {
+		fields = append(fields, cancelorderflowrun.FieldStartedAt)
+	}
+	if m.finished_at != nil {
+		fields = append(fields, cancelorderflowrun.FieldFinishedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *CancelOrderFlowRunMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case cancelorderflowrun.FieldState:
+		return m.State()
+	case cancelorderflowrun.FieldInput:
+		return m.Input()
+	case cancelorderflowrun.FieldCurrentStep:
+		return m.CurrentStep()
+	case cancelorderflowrun.FieldAttempt:
+		return m.Attempt()
+	case cancelorderflowrun.FieldLastError:
+		return m.LastError()
+	case cancelorderflowrun.FieldResults:
+		return m.Results()
+	case cancelorderflowrun.FieldRetryAfter:
+		return m.RetryAfter()
+	case cancelorderflowrun.FieldTraceContext:
+		return m.TraceContext()
+	case cancelorderflowrun.FieldSelfWas:
+		return m.SelfWas()
+	case cancelorderflowrun.FieldCreatedAt:
+		return m.CreatedAt()
+	case cancelorderflowrun.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case cancelorderflowrun.FieldStartedAt:
+		return m.StartedAt()
+	case cancelorderflowrun.FieldFinishedAt:
+		return m.FinishedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *CancelOrderFlowRunMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case cancelorderflowrun.FieldState:
+		return m.OldState(ctx)
+	case cancelorderflowrun.FieldInput:
+		return m.OldInput(ctx)
+	case cancelorderflowrun.FieldCurrentStep:
+		return m.OldCurrentStep(ctx)
+	case cancelorderflowrun.FieldAttempt:
+		return m.OldAttempt(ctx)
+	case cancelorderflowrun.FieldLastError:
+		return m.OldLastError(ctx)
+	case cancelorderflowrun.FieldResults:
+		return m.OldResults(ctx)
+	case cancelorderflowrun.FieldRetryAfter:
+		return m.OldRetryAfter(ctx)
+	case cancelorderflowrun.FieldTraceContext:
+		return m.OldTraceContext(ctx)
+	case cancelorderflowrun.FieldSelfWas:
+		return m.OldSelfWas(ctx)
+	case cancelorderflowrun.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case cancelorderflowrun.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case cancelorderflowrun.FieldStartedAt:
+		return m.OldStartedAt(ctx)
+	case cancelorderflowrun.FieldFinishedAt:
+		return m.OldFinishedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown CancelOrderFlowRun field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *CancelOrderFlowRunMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case cancelorderflowrun.FieldState:
+		v, ok := value.(cancelorderflowrun.State)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetState(v)
+		return nil
+	case cancelorderflowrun.FieldInput:
+		v, ok := value.([]byte)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInput(v)
+		return nil
+	case cancelorderflowrun.FieldCurrentStep:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCurrentStep(v)
+		return nil
+	case cancelorderflowrun.FieldAttempt:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAttempt(v)
+		return nil
+	case cancelorderflowrun.FieldLastError:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastError(v)
+		return nil
+	case cancelorderflowrun.FieldResults:
+		v, ok := value.(map[string]json.RawMessage)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResults(v)
+		return nil
+	case cancelorderflowrun.FieldRetryAfter:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRetryAfter(v)
+		return nil
+	case cancelorderflowrun.FieldTraceContext:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTraceContext(v)
+		return nil
+	case cancelorderflowrun.FieldSelfWas:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSelfWas(v)
+		return nil
+	case cancelorderflowrun.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case cancelorderflowrun.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case cancelorderflowrun.FieldStartedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStartedAt(v)
+		return nil
+	case cancelorderflowrun.FieldFinishedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFinishedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown CancelOrderFlowRun field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *CancelOrderFlowRunMutation) AddedFields() []string {
+	var fields []string
+	if m.addattempt != nil {
+		fields = append(fields, cancelorderflowrun.FieldAttempt)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *CancelOrderFlowRunMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case cancelorderflowrun.FieldAttempt:
+		return m.AddedAttempt()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *CancelOrderFlowRunMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case cancelorderflowrun.FieldAttempt:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAttempt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown CancelOrderFlowRun numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *CancelOrderFlowRunMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(cancelorderflowrun.FieldCurrentStep) {
+		fields = append(fields, cancelorderflowrun.FieldCurrentStep)
+	}
+	if m.FieldCleared(cancelorderflowrun.FieldLastError) {
+		fields = append(fields, cancelorderflowrun.FieldLastError)
+	}
+	if m.FieldCleared(cancelorderflowrun.FieldResults) {
+		fields = append(fields, cancelorderflowrun.FieldResults)
+	}
+	if m.FieldCleared(cancelorderflowrun.FieldRetryAfter) {
+		fields = append(fields, cancelorderflowrun.FieldRetryAfter)
+	}
+	if m.FieldCleared(cancelorderflowrun.FieldTraceContext) {
+		fields = append(fields, cancelorderflowrun.FieldTraceContext)
+	}
+	if m.FieldCleared(cancelorderflowrun.FieldSelfWas) {
+		fields = append(fields, cancelorderflowrun.FieldSelfWas)
+	}
+	if m.FieldCleared(cancelorderflowrun.FieldStartedAt) {
+		fields = append(fields, cancelorderflowrun.FieldStartedAt)
+	}
+	if m.FieldCleared(cancelorderflowrun.FieldFinishedAt) {
+		fields = append(fields, cancelorderflowrun.FieldFinishedAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *CancelOrderFlowRunMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *CancelOrderFlowRunMutation) ClearField(name string) error {
+	switch name {
+	case cancelorderflowrun.FieldCurrentStep:
+		m.ClearCurrentStep()
+		return nil
+	case cancelorderflowrun.FieldLastError:
+		m.ClearLastError()
+		return nil
+	case cancelorderflowrun.FieldResults:
+		m.ClearResults()
+		return nil
+	case cancelorderflowrun.FieldRetryAfter:
+		m.ClearRetryAfter()
+		return nil
+	case cancelorderflowrun.FieldTraceContext:
+		m.ClearTraceContext()
+		return nil
+	case cancelorderflowrun.FieldSelfWas:
+		m.ClearSelfWas()
+		return nil
+	case cancelorderflowrun.FieldStartedAt:
+		m.ClearStartedAt()
+		return nil
+	case cancelorderflowrun.FieldFinishedAt:
+		m.ClearFinishedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown CancelOrderFlowRun nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *CancelOrderFlowRunMutation) ResetField(name string) error {
+	switch name {
+	case cancelorderflowrun.FieldState:
+		m.ResetState()
+		return nil
+	case cancelorderflowrun.FieldInput:
+		m.ResetInput()
+		return nil
+	case cancelorderflowrun.FieldCurrentStep:
+		m.ResetCurrentStep()
+		return nil
+	case cancelorderflowrun.FieldAttempt:
+		m.ResetAttempt()
+		return nil
+	case cancelorderflowrun.FieldLastError:
+		m.ResetLastError()
+		return nil
+	case cancelorderflowrun.FieldResults:
+		m.ResetResults()
+		return nil
+	case cancelorderflowrun.FieldRetryAfter:
+		m.ResetRetryAfter()
+		return nil
+	case cancelorderflowrun.FieldTraceContext:
+		m.ResetTraceContext()
+		return nil
+	case cancelorderflowrun.FieldSelfWas:
+		m.ResetSelfWas()
+		return nil
+	case cancelorderflowrun.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case cancelorderflowrun.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case cancelorderflowrun.FieldStartedAt:
+		m.ResetStartedAt()
+		return nil
+	case cancelorderflowrun.FieldFinishedAt:
+		m.ResetFinishedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown CancelOrderFlowRun field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *CancelOrderFlowRunMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.owner != nil {
+		edges = append(edges, cancelorderflowrun.EdgeOwner)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *CancelOrderFlowRunMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case cancelorderflowrun.EdgeOwner:
+		if id := m.owner; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *CancelOrderFlowRunMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *CancelOrderFlowRunMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *CancelOrderFlowRunMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedowner {
+		edges = append(edges, cancelorderflowrun.EdgeOwner)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *CancelOrderFlowRunMutation) EdgeCleared(name string) bool {
+	switch name {
+	case cancelorderflowrun.EdgeOwner:
+		return m.clearedowner
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *CancelOrderFlowRunMutation) ClearEdge(name string) error {
+	switch name {
+	case cancelorderflowrun.EdgeOwner:
+		m.ClearOwner()
+		return nil
+	}
+	return fmt.Errorf("unknown CancelOrderFlowRun unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *CancelOrderFlowRunMutation) ResetEdge(name string) error {
+	switch name {
+	case cancelorderflowrun.EdgeOwner:
+		m.ResetOwner()
+		return nil
+	}
+	return fmt.Errorf("unknown CancelOrderFlowRun edge %s", name)
+}
 
 // OrderMutation represents an operation that mutates the Order nodes in the graph.
 type OrderMutation struct {
@@ -35,6 +1271,9 @@ type OrderMutation struct {
 	payment_intent_id *string
 	status            *order.Status
 	clearedFields     map[string]struct{}
+	runs              map[int]struct{}
+	removedruns       map[int]struct{}
+	clearedruns       bool
 	done              bool
 	oldValue          func(context.Context) (*Order, error)
 	predicates        []predicate.Order
@@ -223,6 +1462,60 @@ func (m *OrderMutation) ResetStatus() {
 	m.status = nil
 }
 
+// AddRunIDs adds the "runs" edge to the CancelOrderFlowRun entity by ids.
+func (m *OrderMutation) AddRunIDs(ids ...int) {
+	if m.runs == nil {
+		m.runs = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.runs[ids[i]] = struct{}{}
+	}
+}
+
+// ClearRuns clears the "runs" edge to the CancelOrderFlowRun entity.
+func (m *OrderMutation) ClearRuns() {
+	m.clearedruns = true
+}
+
+// RunsCleared reports if the "runs" edge to the CancelOrderFlowRun entity was cleared.
+func (m *OrderMutation) RunsCleared() bool {
+	return m.clearedruns
+}
+
+// RemoveRunIDs removes the "runs" edge to the CancelOrderFlowRun entity by IDs.
+func (m *OrderMutation) RemoveRunIDs(ids ...int) {
+	if m.removedruns == nil {
+		m.removedruns = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.runs, ids[i])
+		m.removedruns[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedRuns returns the removed IDs of the "runs" edge to the CancelOrderFlowRun entity.
+func (m *OrderMutation) RemovedRunsIDs() (ids []int) {
+	for id := range m.removedruns {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// RunsIDs returns the "runs" edge IDs in the mutation.
+func (m *OrderMutation) RunsIDs() (ids []int) {
+	for id := range m.runs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetRuns resets all changes to the "runs" edge.
+func (m *OrderMutation) ResetRuns() {
+	m.runs = nil
+	m.clearedruns = false
+	m.removedruns = nil
+}
+
 // Where appends a list predicates to the OrderMutation builder.
 func (m *OrderMutation) Where(ps ...predicate.Order) {
 	m.predicates = append(m.predicates, ps...)
@@ -382,48 +1675,84 @@ func (m *OrderMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *OrderMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.runs != nil {
+		edges = append(edges, order.EdgeRuns)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *OrderMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case order.EdgeRuns:
+		ids := make([]ent.Value, 0, len(m.runs))
+		for id := range m.runs {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *OrderMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.removedruns != nil {
+		edges = append(edges, order.EdgeRuns)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *OrderMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case order.EdgeRuns:
+		ids := make([]ent.Value, 0, len(m.removedruns))
+		for id := range m.removedruns {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *OrderMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedruns {
+		edges = append(edges, order.EdgeRuns)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *OrderMutation) EdgeCleared(name string) bool {
+	switch name {
+	case order.EdgeRuns:
+		return m.clearedruns
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *OrderMutation) ClearEdge(name string) error {
+	switch name {
+	}
 	return fmt.Errorf("unknown Order unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *OrderMutation) ResetEdge(name string) error {
+	switch name {
+	case order.EdgeRuns:
+		m.ResetRuns()
+		return nil
+	}
 	return fmt.Errorf("unknown Order edge %s", name)
 }

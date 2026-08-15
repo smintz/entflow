@@ -3,11 +3,54 @@
 package migrate
 
 import (
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/dialect/sql/schema"
 	"entgo.io/ent/schema/field"
 )
 
 var (
+	// CancelOrderFlowRunsColumns holds the columns for the "cancel_order_flow_runs" table.
+	CancelOrderFlowRunsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "state", Type: field.TypeEnum, Enums: []string{"pending", "running", "done", "cancelled", "failed:cancel", "failed:refund", "failed:order.cancelled"}, Default: "pending"},
+		{Name: "input", Type: field.TypeBytes},
+		{Name: "current_step", Type: field.TypeString, Nullable: true},
+		{Name: "attempt", Type: field.TypeInt, Default: 0},
+		{Name: "last_error", Type: field.TypeString, Nullable: true},
+		{Name: "results", Type: field.TypeJSON, Nullable: true},
+		{Name: "retry_after", Type: field.TypeTime, Nullable: true},
+		{Name: "trace_context", Type: field.TypeString, Nullable: true},
+		{Name: "self_was", Type: field.TypeString, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "started_at", Type: field.TypeTime, Nullable: true},
+		{Name: "finished_at", Type: field.TypeTime, Nullable: true},
+		{Name: "cancel_order_flow_run_owner", Type: field.TypeInt},
+	}
+	// CancelOrderFlowRunsTable holds the schema information for the "cancel_order_flow_runs" table.
+	CancelOrderFlowRunsTable = &schema.Table{
+		Name:       "cancel_order_flow_runs",
+		Columns:    CancelOrderFlowRunsColumns,
+		PrimaryKey: []*schema.Column{CancelOrderFlowRunsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "cancel_order_flow_runs_orders_owner",
+				Columns:    []*schema.Column{CancelOrderFlowRunsColumns[14]},
+				RefColumns: []*schema.Column{OrdersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "cancelorderflowrun_state_retry_after",
+				Unique:  false,
+				Columns: []*schema.Column{CancelOrderFlowRunsColumns[1], CancelOrderFlowRunsColumns[7]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "state IN ('pending', 'running')",
+				},
+			},
+		},
+	}
 	// OrdersColumns holds the columns for the "orders" table.
 	OrdersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -22,9 +65,11 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		CancelOrderFlowRunsTable,
 		OrdersTable,
 	}
 )
 
 func init() {
+	CancelOrderFlowRunsTable.ForeignKeys[0].RefTable = OrdersTable
 }
