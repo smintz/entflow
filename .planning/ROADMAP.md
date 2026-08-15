@@ -102,7 +102,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4, run in parallel)*
 
-- [ ] 02-06-PLAN.md — Observability: per-step spans, trace context across the resume boundary, and the narrowed META-02 amendment
+- [x] 02-06-PLAN.md — Observability: per-step spans, trace context across the resume boundary, and the narrowed META-02 amendment
 - [ ] 02-07-PLAN.md — Worker lifecycle: jittered polling, graceful shutdown, and both deployment topologies
 
 **Wave 6** *(blocked on Wave 5)*

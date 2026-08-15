@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: Durability
 status: executing
-stopped_at: Completed 02-05-PLAN.md
-last_updated: "2026-08-15T13:26:38.243Z"
+stopped_at: Completed 02-06-PLAN.md
+last_updated: "2026-08-15T13:50:38.434Z"
 last_activity: 2026-08-15
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 12
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-08)
 ## Current Position
 
 Phase: 02 (Durability) — EXECUTING
-Plan: 6 of 8
+Plan: 7 of 8
 Status: Ready to execute
 Last activity: 2026-08-15 — Phase 02 execution resumed (wave continue)
 
-Progress: [████████░░] 75%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Progress: [████████░░] 75%
 | Phase 02-durability P03 | 30min | 3 tasks | 9 files |
 | Phase 02-durability P04 | 22min | 3 tasks | 13 files |
 | Phase 02-durability P05 | 50min | 3 tasks | 25 files |
+| Phase 02-durability P06 | 20min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,10 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 02-05]: CancelOrderFlowRun's Policy() mutation side gained a universal admin-allow rule and a Create-ownership check beyond the plan's literal marker+cancel-guard description — required so an admin viewer isn't denied on mutation shapes outside Create/cancel-set-Update, and so entflow.Start has a legitimate non-worker allow path at all.
 - [Phase ?]: [Phase 02-05]: worker/dbstep.go applies Options.Context before wfmarker.Set (D-45) — the application hook can never observe or forge the marker; a worker with no hook configured is honestly denied by a privacy-governed run entity, not silently granted access.
 - [Phase ?]: [Phase 02-05]: entflow.Engine.Cancel is a method, not a package-level generic function like Start — it needs no second type parameter, so Start's erasure gymnastics don't apply; it runs under the caller's own context/viewer, never the worker's.
+- [Phase ?]: [Phase 02-06]: D-57 landed — trace API only, defaults to trace/noop, never the ambient global; measured footprint at pinned v1.45.0 corrects RESEARCH.md Assumption A2 (attribute's xxhash wrapper pulls the real external cespare/xxhash/v2 module, not a vendored copy).
+- [Phase ?]: [Phase 02-06]: D-58 resolved — a run's root span is started and ended within the single claim that first seeds trace_context, never held open across a claim boundary; later claims restore it as a remote parent for that claim's own child span.
+- [Phase ?]: [Phase 02-06]: D-59 resolved — trace_context stores <traceID>-<spanID>-<flags>; the flags byte is load-bearing (a real SDK's ParentBased sampler silently drops unsampled-flagged restored spans), and Fail (not just Advance) now persists it so a retried first step doesn't fork a new trace.
+- [Phase ?]: [Phase 02-06]: deps_test.go's derived-allowlist technique extended to tracing — TestNoTransportDeps unions the ent-derived and tracing-derived closures; TestTracingDependencyNarrowness fails the graph on any of the five ambient-global modules or the SDK itself.
 
 ### Pending Todos
 
@@ -131,6 +136,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-15T13:26:38.224Z
-Stopped at: Completed 02-05-PLAN.md
+Last session: 2026-08-15T13:50:38.414Z
+Stopped at: Completed 02-06-PLAN.md
 Resume file: None

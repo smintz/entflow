@@ -58,7 +58,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **OPS-02**: Who may view, cancel, or retry a run is governed by a `Policy()` on the run entity
 - [ ] **OPS-03**: Operator can manually retry a failed run as a permitted state transition
 - [x] **OPS-04**: Operator can cancel an in-flight run
-- [ ] **OPS-05**: Each run emits one span with a child span per step named `workflow.<Flow>.<step>`, carrying attempt count, error, and state as attributes
+- [x] **OPS-05**: Each run emits one span with a child span per step named `workflow.<Flow>.<step>`, carrying attempt count, error, and state as attributes
 
 ### State Machine Cross-Validation
 
@@ -163,7 +163,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OPS-01 | Phase 2 | Complete |
 | OPS-02 | Phase 2 | Complete |
 | OPS-04 | Phase 2 | Complete |
-| OPS-05 | Phase 2 | Pending |
+| OPS-05 | Phase 2 | Complete |
 | TEST-01 | Phase 2 | Pending |
 | TEST-02 | Phase 2 | Pending |
 | ACT-01 | Phase 3 | Pending |
