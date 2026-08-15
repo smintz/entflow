@@ -14,12 +14,17 @@ import (
 	"github.com/smintz/entflow/internal/testdata/entflowfixture"
 )
 
-// CancelOrderFlowRun is the hand-written run entity for Order's CancelOrder
-// flow (D-23) — the shape Phase 5's schemast-based entity injection must
-// reproduce. Its Mixin() derives entflow.RunMixin() from the flow's own
-// declared step graph (Order{}.Flows()[0]), so the `state` enum this table
-// actually stores and entflow.RunStates(f) are the same list by
-// construction, never a hand-copied one.
+// CancelOrderFlowRun is the hand-written run entity for Order's flows
+// (D-23) — the shape Phase 5's schemast-based entity injection must
+// reproduce. Its Mixin() derives entflow.RunMixin() from EVERY flow
+// Order{}.Flows() declares (currently CancelOrder and, since plan 02-08,
+// the multi-step ProcessOrder crash-simulation fixture), so the `state`
+// enum this table actually stores carries a failed:<step> value for every
+// step either flow can reach, never a hand-copied or partial list. Two
+// flows legally sharing one physical run table is RunMixin's own
+// documented multi-flow case (run.go) — see order_flows.go's Flows() for
+// why both flows are returned from one slice rather than each getting its
+// own run entity.
 type CancelOrderFlowRun struct {
 	ent.Schema
 }
@@ -27,7 +32,7 @@ type CancelOrderFlowRun struct {
 // Mixin of the CancelOrderFlowRun.
 func (CancelOrderFlowRun) Mixin() []ent.Mixin {
 	return []ent.Mixin{
-		entflow.RunMixin(Order{}.Flows()[0]),
+		entflow.RunMixin(Order{}.Flows()...),
 	}
 }
 

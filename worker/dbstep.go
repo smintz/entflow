@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/smintz/entflow"
+	"github.com/smintz/entflow/internal/crashpoint"
 	"github.com/smintz/entflow/internal/wfmarker"
 )
 
@@ -179,6 +180,15 @@ func claimOnce(ctx context.Context, flowName string, store entflow.RunStore, run
 		return false, fmt.Errorf("entflow/worker: claim transaction has type %T, does not satisfy entflow.RawQuerier", txAny)
 	}
 
+	// The flow-scoped pre-claim boundary (D-56, crashpoint.PreClaimName):
+	// fired once, before the claim query runs at all and therefore before
+	// any row — hence any step — is even known. Nothing has been read or
+	// written yet, so a hook error here rolls back a transaction that
+	// never touched anything.
+	if err := crashpoint.At(ctx, crashpoint.PreClaimName); err != nil {
+		return false, fmt.Errorf("entflow/worker: crash point %q: %w", crashpoint.PreClaimName, err)
+	}
+
 	id, ok, err := strategy.Claim(ctx, q, store.Table(), claimStates)
 	if err != nil {
 		return false, fmt.Errorf("entflow/worker: claim query: %w", err)
@@ -242,6 +252,30 @@ func claimOnce(ctx context.Context, flowName string, store entflow.RunStore, run
 			return false, fmt.Errorf("entflow/worker: run %v: current_step %q not found in flow's step order", id, run.CurrentStep)
 		}
 	}
+	if nextIdx >= len(stepOrder) {
+		return false, fmt.Errorf("entflow/worker: run %v: current_step %q already the last step in the flow's order — should be unclaimable", id, run.CurrentStep)
+	}
+	targetStep := stepOrder[nextIdx]
+
+	// AfterClaim and AfterHydrate (D-56) both fire here, immediately after
+	// the claimed row has been read (store.Load, right above) and the step
+	// this claim is about to work on has been identified (targetStep) —
+	// deliberately positioned together rather than strictly at their
+	// literal, separate code locations (AfterClaim technically precedes
+	// store.Load; AfterHydrate follows it). Naming a crash point requires
+	// knowing WHICH step it belongs to, and that is only knowable once
+	// run.CurrentStep has been read and resolved into nextIdx — but
+	// store.Load and the CurrentStep resolution above are both reads with
+	// no durability consequence of their own, so firing both checks at
+	// this single point produces an identical observable outcome (a
+	// rollback with zero effect and zero progress-pointer change) as
+	// firing AfterClaim strictly before store.Load would.
+	if err := crashpoint.At(ctx, crashpoint.Name(targetStep, crashpoint.AfterClaim)); err != nil {
+		return false, fmt.Errorf("entflow/worker: crash point %q: %w", crashpoint.Name(targetStep, crashpoint.AfterClaim), err)
+	}
+	if err := crashpoint.At(ctx, crashpoint.Name(targetStep, crashpoint.AfterHydrate)); err != nil {
+		return false, fmt.Errorf("entflow/worker: crash point %q: %w", crashpoint.Name(targetStep, crashpoint.AfterHydrate), err)
+	}
 
 	adv := entflow.Advance{
 		FromState:    run.State,
@@ -269,6 +303,9 @@ func claimOnce(ctx context.Context, flowName string, store entflow.RunStore, run
 	var stepErr error
 	for i := nextIdx; i < len(stepOrder); i++ {
 		name := stepOrder[i]
+		if err := crashpoint.At(ctx, crashpoint.Name(name, crashpoint.BeforeStep)); err != nil {
+			return false, fmt.Errorf("entflow/worker: crash point %q: %w", crashpoint.Name(name, crashpoint.BeforeStep), err)
+		}
 		outcome, execErr := runner.ExecStep(ctx, txAny, entflow.StepCall{
 			Step:    name,
 			Input:   run.Input,
@@ -283,6 +320,9 @@ func claimOnce(ctx context.Context, flowName string, store entflow.RunStore, run
 		}
 		if !outcome.Ran {
 			continue
+		}
+		if err := crashpoint.At(ctx, crashpoint.Name(name, crashpoint.AfterStep)); err != nil {
+			return false, fmt.Errorf("entflow/worker: crash point %q: %w", crashpoint.Name(name, crashpoint.AfterStep), err)
 		}
 		ranStep = name
 		if adv.Results == nil {
@@ -337,6 +377,19 @@ func claimOnce(ctx context.Context, flowName string, store entflow.RunStore, run
 	}
 	if !advanced {
 		return false, fmt.Errorf("entflow/worker: advancing run %v: %w", id, entflow.ErrRunNotAdvanced)
+	}
+
+	// AfterAdvance and BeforeCommit (D-56) — the progress-pointer write has
+	// returned successfully, and the transaction has not yet committed.
+	// targetStep is used, not ranStep, so both boundaries stay named even
+	// on the empty edge where every remaining step's conditions evaluated
+	// false and ranStep is "" (adv.ToState walked straight to done with no
+	// step closure invoked).
+	if err := crashpoint.At(ctx, crashpoint.Name(targetStep, crashpoint.AfterAdvance)); err != nil {
+		return false, fmt.Errorf("entflow/worker: crash point %q: %w", crashpoint.Name(targetStep, crashpoint.AfterAdvance), err)
+	}
+	if err := crashpoint.At(ctx, crashpoint.Name(targetStep, crashpoint.BeforeCommit)); err != nil {
+		return false, fmt.Errorf("entflow/worker: crash point %q: %w", crashpoint.Name(targetStep, crashpoint.BeforeCommit), err)
 	}
 
 	if err := tx.Commit(); err != nil {

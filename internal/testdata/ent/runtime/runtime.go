@@ -50,6 +50,10 @@ func init() {
 	order.Hooks[0] = orderHooks[0]
 	orderFields := schema.Order{}.Fields()
 	_ = orderFields
+	// orderDescEffectCount is the schema descriptor for effect_count field.
+	orderDescEffectCount := orderFields[1].Descriptor()
+	// order.DefaultEffectCount holds the default value on creation for the effect_count field.
+	order.DefaultEffectCount = orderDescEffectCount.Default.(int)
 }
 
 const (

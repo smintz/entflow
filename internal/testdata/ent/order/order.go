@@ -17,6 +17,8 @@ const (
 	FieldID = "id"
 	// FieldPaymentIntentID holds the string denoting the payment_intent_id field in the database.
 	FieldPaymentIntentID = "payment_intent_id"
+	// FieldEffectCount holds the string denoting the effect_count field in the database.
+	FieldEffectCount = "effect_count"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
 	// EdgeRuns holds the string denoting the runs edge name in mutations.
@@ -36,6 +38,7 @@ const (
 var Columns = []string{
 	FieldID,
 	FieldPaymentIntentID,
+	FieldEffectCount,
 	FieldStatus,
 }
 
@@ -56,6 +59,8 @@ func ValidColumn(column string) bool {
 //	import _ "github.com/smintz/entflow/internal/testdata/ent/runtime"
 var (
 	Hooks [1]ent.Hook
+	// DefaultEffectCount holds the default value on creation for the "effect_count" field.
+	DefaultEffectCount int
 )
 
 // Status defines the type for the "status" enum field.
@@ -99,6 +104,11 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 // ByPaymentIntentID orders the results by the payment_intent_id field.
 func ByPaymentIntentID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPaymentIntentID, opts...).ToFunc()
+}
+
+// ByEffectCount orders the results by the effect_count field.
+func ByEffectCount(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEffectCount, opts...).ToFunc()
 }
 
 // ByStatus orders the results by the status field.

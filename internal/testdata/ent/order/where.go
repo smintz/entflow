@@ -58,6 +58,11 @@ func PaymentIntentID(v string) predicate.Order {
 	return predicate.Order(sql.FieldEQ(FieldPaymentIntentID, v))
 }
 
+// EffectCount applies equality check predicate on the "effect_count" field. It's identical to EffectCountEQ.
+func EffectCount(v int) predicate.Order {
+	return predicate.Order(sql.FieldEQ(FieldEffectCount, v))
+}
+
 // PaymentIntentIDEQ applies the EQ predicate on the "payment_intent_id" field.
 func PaymentIntentIDEQ(v string) predicate.Order {
 	return predicate.Order(sql.FieldEQ(FieldPaymentIntentID, v))
@@ -131,6 +136,46 @@ func PaymentIntentIDEqualFold(v string) predicate.Order {
 // PaymentIntentIDContainsFold applies the ContainsFold predicate on the "payment_intent_id" field.
 func PaymentIntentIDContainsFold(v string) predicate.Order {
 	return predicate.Order(sql.FieldContainsFold(FieldPaymentIntentID, v))
+}
+
+// EffectCountEQ applies the EQ predicate on the "effect_count" field.
+func EffectCountEQ(v int) predicate.Order {
+	return predicate.Order(sql.FieldEQ(FieldEffectCount, v))
+}
+
+// EffectCountNEQ applies the NEQ predicate on the "effect_count" field.
+func EffectCountNEQ(v int) predicate.Order {
+	return predicate.Order(sql.FieldNEQ(FieldEffectCount, v))
+}
+
+// EffectCountIn applies the In predicate on the "effect_count" field.
+func EffectCountIn(vs ...int) predicate.Order {
+	return predicate.Order(sql.FieldIn(FieldEffectCount, vs...))
+}
+
+// EffectCountNotIn applies the NotIn predicate on the "effect_count" field.
+func EffectCountNotIn(vs ...int) predicate.Order {
+	return predicate.Order(sql.FieldNotIn(FieldEffectCount, vs...))
+}
+
+// EffectCountGT applies the GT predicate on the "effect_count" field.
+func EffectCountGT(v int) predicate.Order {
+	return predicate.Order(sql.FieldGT(FieldEffectCount, v))
+}
+
+// EffectCountGTE applies the GTE predicate on the "effect_count" field.
+func EffectCountGTE(v int) predicate.Order {
+	return predicate.Order(sql.FieldGTE(FieldEffectCount, v))
+}
+
+// EffectCountLT applies the LT predicate on the "effect_count" field.
+func EffectCountLT(v int) predicate.Order {
+	return predicate.Order(sql.FieldLT(FieldEffectCount, v))
+}
+
+// EffectCountLTE applies the LTE predicate on the "effect_count" field.
+func EffectCountLTE(v int) predicate.Order {
+	return predicate.Order(sql.FieldLTE(FieldEffectCount, v))
 }
 
 // StatusEQ applies the EQ predicate on the "status" field.

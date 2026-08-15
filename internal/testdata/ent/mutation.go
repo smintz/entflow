@@ -1269,6 +1269,8 @@ type OrderMutation struct {
 	typ               string
 	id                *int
 	payment_intent_id *string
+	effect_count      *int
+	addeffect_count   *int
 	status            *order.Status
 	clearedFields     map[string]struct{}
 	runs              map[int]struct{}
@@ -1426,6 +1428,62 @@ func (m *OrderMutation) ResetPaymentIntentID() {
 	delete(m.clearedFields, order.FieldPaymentIntentID)
 }
 
+// SetEffectCount sets the "effect_count" field.
+func (m *OrderMutation) SetEffectCount(i int) {
+	m.effect_count = &i
+	m.addeffect_count = nil
+}
+
+// EffectCount returns the value of the "effect_count" field in the mutation.
+func (m *OrderMutation) EffectCount() (r int, exists bool) {
+	v := m.effect_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEffectCount returns the old "effect_count" field's value of the Order entity.
+// If the Order object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OrderMutation) OldEffectCount(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEffectCount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEffectCount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEffectCount: %w", err)
+	}
+	return oldValue.EffectCount, nil
+}
+
+// AddEffectCount adds i to the "effect_count" field.
+func (m *OrderMutation) AddEffectCount(i int) {
+	if m.addeffect_count != nil {
+		*m.addeffect_count += i
+	} else {
+		m.addeffect_count = &i
+	}
+}
+
+// AddedEffectCount returns the value that was added to the "effect_count" field in this mutation.
+func (m *OrderMutation) AddedEffectCount() (r int, exists bool) {
+	v := m.addeffect_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetEffectCount resets all changes to the "effect_count" field.
+func (m *OrderMutation) ResetEffectCount() {
+	m.effect_count = nil
+	m.addeffect_count = nil
+}
+
 // SetStatus sets the "status" field.
 func (m *OrderMutation) SetStatus(o order.Status) {
 	m.status = &o
@@ -1550,9 +1608,12 @@ func (m *OrderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *OrderMutation) Fields() []string {
-	fields := make([]string, 0, 2)
+	fields := make([]string, 0, 3)
 	if m.payment_intent_id != nil {
 		fields = append(fields, order.FieldPaymentIntentID)
+	}
+	if m.effect_count != nil {
+		fields = append(fields, order.FieldEffectCount)
 	}
 	if m.status != nil {
 		fields = append(fields, order.FieldStatus)
@@ -1567,6 +1628,8 @@ func (m *OrderMutation) Field(name string) (ent.Value, bool) {
 	switch name {
 	case order.FieldPaymentIntentID:
 		return m.PaymentIntentID()
+	case order.FieldEffectCount:
+		return m.EffectCount()
 	case order.FieldStatus:
 		return m.Status()
 	}
@@ -1580,6 +1643,8 @@ func (m *OrderMutation) OldField(ctx context.Context, name string) (ent.Value, e
 	switch name {
 	case order.FieldPaymentIntentID:
 		return m.OldPaymentIntentID(ctx)
+	case order.FieldEffectCount:
+		return m.OldEffectCount(ctx)
 	case order.FieldStatus:
 		return m.OldStatus(ctx)
 	}
@@ -1598,6 +1663,13 @@ func (m *OrderMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetPaymentIntentID(v)
 		return nil
+	case order.FieldEffectCount:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEffectCount(v)
+		return nil
 	case order.FieldStatus:
 		v, ok := value.(order.Status)
 		if !ok {
@@ -1612,13 +1684,21 @@ func (m *OrderMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *OrderMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.addeffect_count != nil {
+		fields = append(fields, order.FieldEffectCount)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *OrderMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case order.FieldEffectCount:
+		return m.AddedEffectCount()
+	}
 	return nil, false
 }
 
@@ -1627,6 +1707,13 @@ func (m *OrderMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *OrderMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case order.FieldEffectCount:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddEffectCount(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Order numeric field %s", name)
 }
@@ -1665,6 +1752,9 @@ func (m *OrderMutation) ResetField(name string) error {
 	switch name {
 	case order.FieldPaymentIntentID:
 		m.ResetPaymentIntentID()
+		return nil
+	case order.FieldEffectCount:
+		m.ResetEffectCount()
 		return nil
 	case order.FieldStatus:
 		m.ResetStatus()

@@ -127,6 +127,9 @@ const (
 	StateFailedCancel         State = "failed:cancel"
 	StateFailedRefund         State = "failed:refund"
 	StateFailedOrderCancelled State = "failed:order.cancelled"
+	StateFailedShip           State = "failed:ship"
+	StateFailedReserve        State = "failed:reserve"
+	StateFailedCharge         State = "failed:charge"
 )
 
 func (s State) String() string {
@@ -136,7 +139,7 @@ func (s State) String() string {
 // StateValidator is a validator for the "state" field enum values. It is called by the builders before save.
 func StateValidator(s State) error {
 	switch s {
-	case StatePending, StateRunning, StateDone, StateCancelled, StateFailedCancel, StateFailedRefund, StateFailedOrderCancelled:
+	case StatePending, StateRunning, StateDone, StateCancelled, StateFailedCancel, StateFailedRefund, StateFailedOrderCancelled, StateFailedShip, StateFailedReserve, StateFailedCharge:
 		return nil
 	default:
 		return fmt.Errorf("cancelorderflowrun: invalid enum value for state field: %q", s)

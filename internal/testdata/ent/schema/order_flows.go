@@ -20,6 +20,16 @@ type RefundResult struct {
 	RefundID string
 }
 
+// ProcessOrderRequest is the input to the ProcessOrder flow — plan 02-08's
+// multi-DB-step crash-simulation fixture. CancelOrder has exactly one
+// executable DB step, which makes "crash at every step boundary" close to
+// vacuous; ProcessOrder exists solely to give the harness a flow with
+// enough steps for the graph-derived crash-point matrix (D-56) to be a
+// meaningful, non-trivial enumeration.
+type ProcessOrderRequest struct {
+	OrderID int
+}
+
 // Flows declares the flows owned by Order. This is the worked example from
 // entflow.md §3.1 in full: the DB step that transitions the order, an
 // Activity guarded by SelfWas("paid") with a fixed backoff retry policy, and
@@ -53,5 +63,60 @@ func (Order) Flows() []entflow.Flow {
 		entflow.Retry(entflow.Backoff(5, time.Second, time.Minute)),
 	)
 	entflow.Emit(f, "order.cancelled", entflow.After("cancel"))
-	return []entflow.Flow{f}
+
+	p := processOrderFlow()
+
+	// CancelOrderFlowRun's Mixin() (cancelorderflowrun.go) derives its
+	// `state` enum from EVERY flow returned here, not just f — a run table
+	// shared by two flows needs a failed:<step> value for both flows'
+	// steps. Keeping both flows in one Flows() slice is what lets
+	// entflow.RunMixin(Order{}.Flows()...) pick up ProcessOrder's steps
+	// automatically the moment they are declared, with no separate wiring.
+	return []entflow.Flow{f, p}
+}
+
+// processOrderFlow declares ProcessOrder: three DB steps that each mutate
+// Order's status and increment its effect_count column (order.go), the
+// D-55 side-effect counter every crash-and-resume subtest asserts against
+// exactly. It shares CancelOrderFlowRun's table via the same
+// entflowfixture.RunStore both flows are registered against — plan 02-08's
+// own decision (see order.go's effect_count doc comment) is a column on
+// Order, not a dedicated run table, so no new run entity is needed here.
+//
+// The three steps are declared out of dependency order ("ship" first in
+// source, "reserve" last) and wired back into the correct execution order
+// purely through After edges: reserve -> charge -> ship. This is
+// deliberate, not sloppy — a topoOrder implementation that silently fell
+// back to declaration order when it should be resolving After edges would
+// execute these three steps in the WRONG order and this flow would still
+// look plausible; declaring them out of order is what makes the ordering
+// non-trivial enough to actually exercise topoOrder's dependency
+// resolution (D-56's "the matrix is enumerated from the flow's step graph"
+// requires that graph to be a real graph, not a list that happens to
+// already be sorted).
+func processOrderFlow() entflow.Flow {
+	f := entflow.New[*ProcessOrderRequest]("ProcessOrder", entflow.WithOwner("Order"),
+		entflow.WithOwnerRef(func(in *ProcessOrderRequest) (int, error) {
+			return in.OrderID, nil
+		}),
+	)
+	entflow.UpdateSelf(f, "ship", func(ctx context.Context, tx *ent.Tx, in *ProcessOrderRequest) (*ent.Order, error) {
+		return tx.Order.UpdateOneID(in.OrderID).
+			SetStatus(order.StatusShipped).
+			AddEffectCount(1).
+			Save(ctx)
+	}, entflow.Transition("shipped"), entflow.After("charge"))
+	entflow.UpdateSelf(f, "reserve", func(ctx context.Context, tx *ent.Tx, in *ProcessOrderRequest) (*ent.Order, error) {
+		return tx.Order.UpdateOneID(in.OrderID).
+			SetStatus(order.StatusPending).
+			AddEffectCount(1).
+			Save(ctx)
+	}, entflow.Transition("pending"))
+	entflow.UpdateSelf(f, "charge", func(ctx context.Context, tx *ent.Tx, in *ProcessOrderRequest) (*ent.Order, error) {
+		return tx.Order.UpdateOneID(in.OrderID).
+			SetStatus(order.StatusPaid).
+			AddEffectCount(1).
+			Save(ctx)
+	}, entflow.Transition("paid"), entflow.After("reserve"))
+	return f
 }

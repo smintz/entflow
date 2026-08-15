@@ -18,6 +18,8 @@ type Order struct {
 	ID int `json:"id,omitempty"`
 	// PaymentIntentID holds the value of the "payment_intent_id" field.
 	PaymentIntentID string `json:"payment_intent_id,omitempty"`
+	// EffectCount holds the value of the "effect_count" field.
+	EffectCount int `json:"effect_count,omitempty"`
 	// Status holds the value of the "status" field.
 	Status order.Status `json:"status,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -49,7 +51,7 @@ func (*Order) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case order.FieldID:
+		case order.FieldID, order.FieldEffectCount:
 			values[i] = new(sql.NullInt64)
 		case order.FieldPaymentIntentID, order.FieldStatus:
 			values[i] = new(sql.NullString)
@@ -79,6 +81,12 @@ func (_m *Order) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field payment_intent_id", values[i])
 			} else if value.Valid {
 				_m.PaymentIntentID = value.String
+			}
+		case order.FieldEffectCount:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field effect_count", values[i])
+			} else if value.Valid {
+				_m.EffectCount = int(value.Int64)
 			}
 		case order.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -129,6 +137,9 @@ func (_m *Order) String() string {
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("payment_intent_id=")
 	builder.WriteString(_m.PaymentIntentID)
+	builder.WriteString(", ")
+	builder.WriteString("effect_count=")
+	builder.WriteString(fmt.Sprintf("%v", _m.EffectCount))
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Status))

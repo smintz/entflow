@@ -116,11 +116,19 @@ func TestTopologyDedicatedBinaryAndInProcessWorkerShareOneDatabase(t *testing.T)
 	}
 
 	// Call site one: the in-process worker, `go w.Run(ctx)` alongside this
-	// test standing in for an API server.
+	// test standing in for an API server. Options.Flows is pinned to
+	// CancelOrder: since plan 02-08, CancelOrderFlowRun's table is also
+	// shared by the ProcessOrder crash-simulation fixture flow (only
+	// registered on eng below via cancelOrder, so it is not actually
+	// claimable here regardless), but pinning Flows explicitly is what
+	// keeps this test's own claim, "CancelOrder's own step IS the observed
+	// effect", true by construction rather than by the accident of which
+	// flow eng happens to have registered.
 	w, err := worker.New(eng, worker.Options{
 		Dialect:      "postgres",
 		Concurrency:  2,
 		PollInterval: 20 * time.Millisecond,
+		Flows:        []string{cancelOrder.Name()},
 		Context: func(c context.Context) context.Context {
 			return entflowfixture.WithViewer(c, entflowfixture.AdminViewer())
 		},
@@ -132,12 +140,17 @@ func TestTopologyDedicatedBinaryAndInProcessWorkerShareOneDatabase(t *testing.T)
 	go func() { done <- w.Run(runCtx) }()
 
 	// Call site two: the dedicated crashworker binary, a real OS subprocess
-	// against the identical schema.
+	// against the identical schema. ENTFLOW_CRASHWORKER_FLOWS mirrors the
+	// in-process worker's own Flows restriction above — the binary
+	// registers every flow schema.Order{}.Flows() declares (its own
+	// documented behavior, internal/testdata/crashworker/README.md), but
+	// this test only seeds and asserts against CancelOrder runs.
 	cmd := exec.Command(crashworkerBinPath)
 	cmd.Env = crashworkerEnv(dsn,
 		"ENTFLOW_CRASHWORKER_CONCURRENCY=2",
 		"ENTFLOW_CRASHWORKER_POLL_INTERVAL=20ms",
 		"ENTFLOW_CRASHWORKER_DRAIN_TIMEOUT=2s",
+		"ENTFLOW_CRASHWORKER_FLOWS="+cancelOrder.Name(),
 	)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -198,6 +211,7 @@ func TestTopologyCrashworkerExitsWithinDrainWindowOnTermination(t *testing.T) {
 		"ENTFLOW_CRASHWORKER_CONCURRENCY=1",
 		"ENTFLOW_CRASHWORKER_POLL_INTERVAL=20ms",
 		fmt.Sprintf("ENTFLOW_CRASHWORKER_DRAIN_TIMEOUT=%s", drainTimeout),
+		"ENTFLOW_CRASHWORKER_FLOWS="+cancelOrder.Name(),
 	)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr

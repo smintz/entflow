@@ -64,36 +64,50 @@ func RunStates(f Flow) []string {
 // mixin.Schema's no-op defaults.
 type runMixin struct {
 	mixin.Schema
-	flow Flow
+	flows []Flow
 }
 
 // RunMixin returns an ent.Mixin carrying every framework-owned column a
 // flow's run row needs (D-28), plus the D-42 `self_was` entry-snapshot
 // column D-28's own list omits. The `state` enum's stored values and Go
-// identifiers are derived from f's declared step graph (D-27) — the same
-// list RunStates(f) returns — so the concrete schema embedding this mixin
-// and entflow's own runtime can never drift apart.
+// identifiers are derived from flows' declared step graphs, in the order
+// passed (D-27), so the concrete schema embedding this mixin and entflow's
+// own runtime can never drift apart.
+//
+// RunMixin accepts more than one flow so several flows can legally share
+// one physical run table — plan 02-08's crash-simulation fixture is the
+// first case that needs this: CancelOrder and a second, multi-DB-step flow
+// both persist through CancelOrderFlowRun, so that table's `state` enum
+// must carry a failed:<step> value for every step either flow declares, not
+// just the first flow's. Each flow's steps contribute their own
+// failed:<step> values in the order the flows are passed; a step name
+// shared by two flows collides at ent codegen time (ent's own
+// duplicate-value validation) rather than silently losing one flow's
+// failure state — callers sharing a table are expected to keep step names
+// distinct across the flows they combine here.
 //
 // RunMixin never declares an edges method: the owner-aggregate lineage edge
 // points at an application type a library-supplied mixin can never name.
 // The concrete schema (e.g. CancelOrderFlowRun) declares that edge itself.
-func RunMixin(f Flow) ent.Mixin {
-	return runMixin{flow: f}
+func RunMixin(flows ...Flow) ent.Mixin {
+	return runMixin{flows: flows}
 }
 
 // Fields of the run mixin — every framework-owned column plus the state
-// enum, whose name/value pairs are derived from m.flow's step graph.
+// enum, whose name/value pairs are derived from the union of every flow in
+// m.flows' step graphs, in flow-then-step order.
 func (m runMixin) Fields() []ent.Field {
-	steps := m.flow.Meta().Steps
-	namevalue := make([]string, 0, 2*(4+len(steps)))
+	namevalue := make([]string, 0, 8)
 	namevalue = append(namevalue,
 		"Pending", RunStatePending,
 		"Running", RunStateRunning,
 		"Done", RunStateDone,
 		"Cancelled", RunStateCancelled,
 	)
-	for _, s := range steps {
-		namevalue = append(namevalue, "Failed"+goIdent(m.flow.Name(), s.Name), RunStateFailed(s.Name))
+	for _, f := range m.flows {
+		for _, s := range f.Meta().Steps {
+			namevalue = append(namevalue, "Failed"+goIdent(f.Name(), s.Name), RunStateFailed(s.Name))
+		}
 	}
 
 	return []ent.Field{

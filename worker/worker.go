@@ -154,12 +154,31 @@ func isSQLiteDialect(dialect string) bool {
 }
 
 // ClaimOnce attempts exactly one claim-execute-advance cycle (D-31: one run
-// per claim transaction, never a batch), trying each registered flow in
-// turn and returning as soon as one succeeds. claimed is false with a nil
-// error when nothing was claimable across every registered flow.
+// per claim transaction, never a batch), trying each registered flow this
+// worker polls in turn and returning as soon as one succeeds. "Each
+// registered flow this worker polls" is every flow on the Engine when
+// Options.Flows is empty, or exactly the named subset otherwise (Flows'
+// own doc comment) — the restriction matters the moment two flows share
+// one physical run table (RunStore.Table() names storage identity, not a
+// flow-scoped one): with no restriction, a worker registered for both
+// would let whichever flow's turn came first in w.eng.Flows() claim and
+// execute a row that a DIFFERENT flow actually started, since the shared
+// table carries no per-row flow discriminator. claimed is false with a nil
+// error when nothing was claimable across every polled flow.
 func (w *Worker) ClaimOnce(ctx context.Context) (claimed bool, err error) {
+	var allowed map[string]bool
+	if len(w.opts.Flows) > 0 {
+		allowed = make(map[string]bool, len(w.opts.Flows))
+		for _, name := range w.opts.Flows {
+			allowed[name] = true
+		}
+	}
+
 	for _, f := range w.eng.Flows() {
 		name := f.Name()
+		if allowed != nil && !allowed[name] {
+			continue
+		}
 		store, ok := w.eng.StoreFor(name)
 		if !ok {
 			continue

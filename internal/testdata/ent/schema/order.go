@@ -22,6 +22,17 @@ func (Order) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("payment_intent_id").
 			Optional(),
+		// effect_count is plan 02-08's D-55 side-effect counter: an integer
+		// column on Order, not a dedicated table, so a duplicated effect
+		// (a step's closure applied twice across a crash and resume) is a
+		// wrong count and the counter is atomic with the effect it counts
+		// by construction — every DB step of the ProcessOrder fixture flow
+		// (order_flows.go) increments it inside the step's own
+		// transaction, the same write that mutates status, rather than a
+		// second write that could itself be lost independently of the
+		// effect it is meant to be counting.
+		field.Int("effect_count").
+			Default(0),
 		field.Enum("status").
 			Values("draft", "pending", "paid", "shipped", "delivered", "cancelled").
 			Default("draft").

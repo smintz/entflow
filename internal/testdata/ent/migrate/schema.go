@@ -12,7 +12,7 @@ var (
 	// CancelOrderFlowRunsColumns holds the columns for the "cancel_order_flow_runs" table.
 	CancelOrderFlowRunsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "state", Type: field.TypeEnum, Enums: []string{"pending", "running", "done", "cancelled", "failed:cancel", "failed:refund", "failed:order.cancelled"}, Default: "pending"},
+		{Name: "state", Type: field.TypeEnum, Enums: []string{"pending", "running", "done", "cancelled", "failed:cancel", "failed:refund", "failed:order.cancelled", "failed:ship", "failed:reserve", "failed:charge"}, Default: "pending"},
 		{Name: "input", Type: field.TypeBytes},
 		{Name: "current_step", Type: field.TypeString, Nullable: true},
 		{Name: "attempt", Type: field.TypeInt, Default: 0},
@@ -55,6 +55,7 @@ var (
 	OrdersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "payment_intent_id", Type: field.TypeString, Nullable: true},
+		{Name: "effect_count", Type: field.TypeInt, Default: 0},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"draft", "pending", "paid", "shipped", "delivered", "cancelled"}, Default: "draft"},
 	}
 	// OrdersTable holds the schema information for the "orders" table.

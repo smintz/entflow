@@ -48,6 +48,27 @@ func (_u *OrderUpdate) ClearPaymentIntentID() *OrderUpdate {
 	return _u
 }
 
+// SetEffectCount sets the "effect_count" field.
+func (_u *OrderUpdate) SetEffectCount(v int) *OrderUpdate {
+	_u.mutation.ResetEffectCount()
+	_u.mutation.SetEffectCount(v)
+	return _u
+}
+
+// SetNillableEffectCount sets the "effect_count" field if the given value is not nil.
+func (_u *OrderUpdate) SetNillableEffectCount(v *int) *OrderUpdate {
+	if v != nil {
+		_u.SetEffectCount(*v)
+	}
+	return _u
+}
+
+// AddEffectCount adds value to the "effect_count" field.
+func (_u *OrderUpdate) AddEffectCount(v int) *OrderUpdate {
+	_u.mutation.AddEffectCount(v)
+	return _u
+}
+
 // SetStatus sets the "status" field.
 func (_u *OrderUpdate) SetStatus(v order.Status) *OrderUpdate {
 	_u.mutation.SetStatus(v)
@@ -158,6 +179,12 @@ func (_u *OrderUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.PaymentIntentIDCleared() {
 		_spec.ClearField(order.FieldPaymentIntentID, field.TypeString)
 	}
+	if value, ok := _u.mutation.EffectCount(); ok {
+		_spec.SetField(order.FieldEffectCount, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedEffectCount(); ok {
+		_spec.AddField(order.FieldEffectCount, field.TypeInt, value)
+	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(order.FieldStatus, field.TypeEnum, value)
 	}
@@ -243,6 +270,27 @@ func (_u *OrderUpdateOne) SetNillablePaymentIntentID(v *string) *OrderUpdateOne 
 // ClearPaymentIntentID clears the value of the "payment_intent_id" field.
 func (_u *OrderUpdateOne) ClearPaymentIntentID() *OrderUpdateOne {
 	_u.mutation.ClearPaymentIntentID()
+	return _u
+}
+
+// SetEffectCount sets the "effect_count" field.
+func (_u *OrderUpdateOne) SetEffectCount(v int) *OrderUpdateOne {
+	_u.mutation.ResetEffectCount()
+	_u.mutation.SetEffectCount(v)
+	return _u
+}
+
+// SetNillableEffectCount sets the "effect_count" field if the given value is not nil.
+func (_u *OrderUpdateOne) SetNillableEffectCount(v *int) *OrderUpdateOne {
+	if v != nil {
+		_u.SetEffectCount(*v)
+	}
+	return _u
+}
+
+// AddEffectCount adds value to the "effect_count" field.
+func (_u *OrderUpdateOne) AddEffectCount(v int) *OrderUpdateOne {
+	_u.mutation.AddEffectCount(v)
 	return _u
 }
 
@@ -385,6 +433,12 @@ func (_u *OrderUpdateOne) sqlSave(ctx context.Context) (_node *Order, err error)
 	}
 	if _u.mutation.PaymentIntentIDCleared() {
 		_spec.ClearField(order.FieldPaymentIntentID, field.TypeString)
+	}
+	if value, ok := _u.mutation.EffectCount(); ok {
+		_spec.SetField(order.FieldEffectCount, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedEffectCount(); ok {
+		_spec.AddField(order.FieldEffectCount, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(order.FieldStatus, field.TypeEnum, value)
