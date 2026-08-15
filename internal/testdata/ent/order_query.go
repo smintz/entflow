@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -11,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/smintz/entflow/internal/testdata/ent/cancelorderflowrun"
 	"github.com/smintz/entflow/internal/testdata/ent/order"
 	"github.com/smintz/entflow/internal/testdata/ent/predicate"
 )
@@ -22,6 +24,7 @@ type OrderQuery struct {
 	order      []order.OrderOption
 	inters     []Interceptor
 	predicates []predicate.Order
+	withRuns   *CancelOrderFlowRunQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -56,6 +59,28 @@ func (_q *OrderQuery) Unique(unique bool) *OrderQuery {
 func (_q *OrderQuery) Order(o ...order.OrderOption) *OrderQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QueryRuns chains the current query on the "runs" edge.
+func (_q *OrderQuery) QueryRuns() *CancelOrderFlowRunQuery {
+	query := (&CancelOrderFlowRunClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(order.Table, order.FieldID, selector),
+			sqlgraph.To(cancelorderflowrun.Table, cancelorderflowrun.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, order.RunsTable, order.RunsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first Order entity from the query.
@@ -250,10 +275,22 @@ func (_q *OrderQuery) Clone() *OrderQuery {
 		order:      append([]order.OrderOption{}, _q.order...),
 		inters:     append([]Interceptor{}, _q.inters...),
 		predicates: append([]predicate.Order{}, _q.predicates...),
+		withRuns:   _q.withRuns.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
+}
+
+// WithRuns tells the query-builder to eager-load the nodes that are connected to
+// the "runs" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *OrderQuery) WithRuns(opts ...func(*CancelOrderFlowRunQuery)) *OrderQuery {
+	query := (&CancelOrderFlowRunClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withRuns = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -332,8 +369,11 @@ func (_q *OrderQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *OrderQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Order, error) {
 	var (
-		nodes = []*Order{}
-		_spec = _q.querySpec()
+		nodes       = []*Order{}
+		_spec       = _q.querySpec()
+		loadedTypes = [1]bool{
+			_q.withRuns != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Order).scanValues(nil, columns)
@@ -341,6 +381,7 @@ func (_q *OrderQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Order,
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Order{config: _q.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -352,7 +393,46 @@ func (_q *OrderQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Order,
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withRuns; query != nil {
+		if err := _q.loadRuns(ctx, query, nodes,
+			func(n *Order) { n.Edges.Runs = []*CancelOrderFlowRun{} },
+			func(n *Order, e *CancelOrderFlowRun) { n.Edges.Runs = append(n.Edges.Runs, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (_q *OrderQuery) loadRuns(ctx context.Context, query *CancelOrderFlowRunQuery, nodes []*Order, init func(*Order), assign func(*Order, *CancelOrderFlowRun)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*Order)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.CancelOrderFlowRun(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(order.RunsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.cancel_order_flow_run_owner
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "cancel_order_flow_run_owner" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "cancel_order_flow_run_owner" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
 }
 
 func (_q *OrderQuery) sqlCount(ctx context.Context) (int, error) {

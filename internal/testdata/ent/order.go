@@ -18,9 +18,32 @@ type Order struct {
 	ID int `json:"id,omitempty"`
 	// PaymentIntentID holds the value of the "payment_intent_id" field.
 	PaymentIntentID string `json:"payment_intent_id,omitempty"`
+	// EffectCount holds the value of the "effect_count" field.
+	EffectCount int `json:"effect_count,omitempty"`
 	// Status holds the value of the "status" field.
-	Status       order.Status `json:"status,omitempty"`
+	Status order.Status `json:"status,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the OrderQuery when eager-loading is set.
+	Edges        OrderEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// OrderEdges holds the relations/edges for other nodes in the graph.
+type OrderEdges struct {
+	// Runs holds the value of the runs edge.
+	Runs []*CancelOrderFlowRun `json:"runs,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// RunsOrErr returns the Runs value or an error if the edge
+// was not loaded in eager-loading.
+func (e OrderEdges) RunsOrErr() ([]*CancelOrderFlowRun, error) {
+	if e.loadedTypes[0] {
+		return e.Runs, nil
+	}
+	return nil, &NotLoadedError{edge: "runs"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -28,7 +51,7 @@ func (*Order) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case order.FieldID:
+		case order.FieldID, order.FieldEffectCount:
 			values[i] = new(sql.NullInt64)
 		case order.FieldPaymentIntentID, order.FieldStatus:
 			values[i] = new(sql.NullString)
@@ -59,6 +82,12 @@ func (_m *Order) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.PaymentIntentID = value.String
 			}
+		case order.FieldEffectCount:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field effect_count", values[i])
+			} else if value.Valid {
+				_m.EffectCount = int(value.Int64)
+			}
 		case order.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
@@ -76,6 +105,11 @@ func (_m *Order) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *Order) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryRuns queries the "runs" edge of the Order entity.
+func (_m *Order) QueryRuns() *CancelOrderFlowRunQuery {
+	return NewOrderClient(_m.config).QueryRuns(_m)
 }
 
 // Update returns a builder for updating this Order.
@@ -103,6 +137,9 @@ func (_m *Order) String() string {
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("payment_intent_id=")
 	builder.WriteString(_m.PaymentIntentID)
+	builder.WriteString(", ")
+	builder.WriteString("effect_count=")
+	builder.WriteString(fmt.Sprintf("%v", _m.EffectCount))
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Status))

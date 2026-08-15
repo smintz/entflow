@@ -24,16 +24,16 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Durability
 
-- [ ] **DUR-01**: Developer can start a run with `flow.Start(ctx, in)`, which persists a run row in `state=pending` and returns a run handle
-- [ ] **DUR-02**: The run row persists state, serialized input, current step, attempt counter, last error, timestamps, and an edge to the owning aggregate row for lineage
-- [ ] **DUR-03**: A DB step's effect and the run's progress pointer commit in the same transaction — a step effect never commits without its progress record
-- [ ] **DUR-04**: The worker claims runs with `SELECT ... FOR UPDATE SKIP LOCKED`, so multiple workers run concurrently with no coordination service
-- [ ] **DUR-05**: A run interrupted by a worker crash at any step boundary is resumed by any worker and reaches the same terminal state
-- [ ] **DUR-06**: The worker re-claims the run at each step boundary rather than holding a lease across the whole flow
-- [ ] **DUR-07**: A run whose steps all succeed reaches `state=done` with the response recorded; a run whose step fails after retries exhaust reaches `failed:<step>` with the error recorded
-- [ ] **DUR-08**: Developer gets an explicit, documented dialect support matrix (Postgres first-class; MySQL and SQLite status stated) and a clear startup error rather than silent breakage on a dialect that cannot support the claim query
-- [ ] **DUR-09**: Developer can run the worker in-process alongside the API server or as a dedicated worker binary
-- [ ] **DUR-10**: The worker shuts down gracefully without abandoning a claimed run mid-step
+- [x] **DUR-01**: Developer can start a run with `flow.Start(ctx, in)`, which persists a run row in `state=pending` and returns a run handle
+- [x] **DUR-02**: The run row persists state, serialized input, current step, attempt counter, last error, timestamps, and an edge to the owning aggregate row for lineage
+- [x] **DUR-03**: A DB step's effect and the run's progress pointer commit in the same transaction — a step effect never commits without its progress record
+- [x] **DUR-04**: The worker claims runs with `SELECT ... FOR UPDATE SKIP LOCKED`, so multiple workers run concurrently with no coordination service
+- [x] **DUR-05**: A run interrupted by a worker crash at any step boundary is resumed by any worker and reaches the same terminal state
+- [x] **DUR-06**: The worker re-claims the run at each step boundary rather than holding a lease across the whole flow
+- [x] **DUR-07**: A run whose steps all succeed reaches `state=done` with the response recorded; a run whose step fails after retries exhaust reaches `failed:<step>` with the error recorded
+- [x] **DUR-08**: Developer gets an explicit, documented dialect support matrix (Postgres first-class; MySQL and SQLite status stated) and a clear startup error rather than silent breakage on a dialect that cannot support the claim query
+- [x] **DUR-09**: Developer can run the worker in-process alongside the API server or as a dedicated worker binary
+- [x] **DUR-10**: The worker shuts down gracefully without abandoning a claimed run mid-step
 
 ### Activities
 
@@ -54,11 +54,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Operations and Observability
 
-- [ ] **OPS-01**: Operator can query runs as ordinary ent entities (e.g. "failed refunds this week", "this order's runs") with no bespoke code
-- [ ] **OPS-02**: Who may view, cancel, or retry a run is governed by a `Policy()` on the run entity
+- [x] **OPS-01**: Operator can query runs as ordinary ent entities (e.g. "failed refunds this week", "this order's runs") with no bespoke code
+- [x] **OPS-02**: Who may view, cancel, or retry a run is governed by a `Policy()` on the run entity
 - [ ] **OPS-03**: Operator can manually retry a failed run as a permitted state transition
-- [ ] **OPS-04**: Operator can cancel an in-flight run
-- [ ] **OPS-05**: Each run emits one span with a child span per step named `workflow.<Flow>.<step>`, carrying attempt count, error, and state as attributes
+- [x] **OPS-04**: Operator can cancel an in-flight run
+- [x] **OPS-05**: Each run emits one span with a child span per step named `workflow.<Flow>.<step>`, carrying attempt count, error, and state as attributes
 
 ### State Machine Cross-Validation
 
@@ -80,8 +80,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Testing and Release Gate
 
-- [ ] **TEST-01**: A crash-simulation harness kills the worker at every step boundary and every Activity beat against a real Postgres, asserting no step effect committed without its progress record, no duplicated Activity effect, and identical terminal state on resume
-- [ ] **TEST-02**: The harness has two explicit tiers — fast in-process logical crash points for matrix coverage, plus real subprocess SIGKILL runs — and the release gate names which tiers must pass
+- [x] **TEST-01**: A crash-simulation harness kills the worker at every step boundary and every Activity beat against a real Postgres, asserting no step effect committed without its progress record, no duplicated Activity effect, and identical terminal state on resume
+- [x] **TEST-02**: The harness has two explicit tiers — fast in-process logical crash points for matrix coverage, plus real subprocess SIGKILL runs — and the release gate names which tiers must pass
 - [ ] **TEST-03**: Property tests cover the transitions cross-validator
 - [ ] **TEST-04**: Golden-file tests cover generated code output
 
@@ -150,22 +150,22 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SM-01 | Phase 1 | Complete |
 | META-01 | Phase 1 | Complete |
 | META-02 | Phase 1 | Complete |
-| DUR-01 | Phase 2 | Pending |
-| DUR-02 | Phase 2 | Pending |
-| DUR-03 | Phase 2 | Pending |
-| DUR-04 | Phase 2 | Pending |
-| DUR-05 | Phase 2 | Pending |
-| DUR-06 | Phase 2 | Pending |
-| DUR-07 | Phase 2 | Pending |
-| DUR-08 | Phase 2 | Pending |
-| DUR-09 | Phase 2 | Pending |
-| DUR-10 | Phase 2 | Pending |
-| OPS-01 | Phase 2 | Pending |
-| OPS-02 | Phase 2 | Pending |
-| OPS-04 | Phase 2 | Pending |
-| OPS-05 | Phase 2 | Pending |
-| TEST-01 | Phase 2 | Pending |
-| TEST-02 | Phase 2 | Pending |
+| DUR-01 | Phase 2 | Complete |
+| DUR-02 | Phase 2 | Complete |
+| DUR-03 | Phase 2 | Complete |
+| DUR-04 | Phase 2 | Complete |
+| DUR-05 | Phase 2 | Complete |
+| DUR-06 | Phase 2 | Complete |
+| DUR-07 | Phase 2 | Complete |
+| DUR-08 | Phase 2 | Complete |
+| DUR-09 | Phase 2 | Complete |
+| DUR-10 | Phase 2 | Complete |
+| OPS-01 | Phase 2 | Complete |
+| OPS-02 | Phase 2 | Complete |
+| OPS-04 | Phase 2 | Complete |
+| OPS-05 | Phase 2 | Complete |
+| TEST-01 | Phase 2 | Complete |
+| TEST-02 | Phase 2 | Complete |
 | ACT-01 | Phase 3 | Pending |
 | ACT-02 | Phase 3 | Pending |
 | ACT-03 | Phase 3 | Pending |

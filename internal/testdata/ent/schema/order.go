@@ -2,6 +2,7 @@ package schema
 
 import (
 	"entgo.io/ent"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 
 	"github.com/smintz/entflow"
@@ -21,6 +22,17 @@ func (Order) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("payment_intent_id").
 			Optional(),
+		// effect_count is plan 02-08's D-55 side-effect counter: an integer
+		// column on Order, not a dedicated table, so a duplicated effect
+		// (a step's closure applied twice across a crash and resume) is a
+		// wrong count and the counter is atomic with the effect it counts
+		// by construction — every DB step of the ProcessOrder fixture flow
+		// (order_flows.go) increments it inside the step's own
+		// transaction, the same write that mutates status, rather than a
+		// second write that could itself be lost independently of the
+		// effect it is meant to be counting.
+		field.Int("effect_count").
+			Default(0),
 		field.Enum("status").
 			Values("draft", "pending", "paid", "shipped", "delivered", "cancelled").
 			Default("draft").
@@ -30,6 +42,17 @@ func (Order) Fields() []ent.Field {
 				"paid":    {"shipped", "cancelled"},
 				"shipped": {"delivered"},
 			})),
+	}
+}
+
+// Edges of the Order.
+func (Order) Edges() []ent.Edge {
+	return []ent.Edge{
+		// runs is the inverse of CancelOrderFlowRun's "owner" edge — the
+		// D-26 lineage edge a run row carries back to the aggregate it
+		// belongs to.
+		edge.From("runs", CancelOrderFlowRun.Type).
+			Ref("owner"),
 	}
 }
 

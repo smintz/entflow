@@ -3,18 +3,57 @@
 package runtime
 
 import (
+	"context"
+	"time"
+
+	"github.com/smintz/entflow/internal/testdata/ent/cancelorderflowrun"
 	"github.com/smintz/entflow/internal/testdata/ent/order"
 	"github.com/smintz/entflow/internal/testdata/ent/schema"
+
+	"entgo.io/ent"
+	"entgo.io/ent/privacy"
 )
 
 // The init function reads all schema descriptors with runtime code
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	cancelorderflowrunMixin := schema.CancelOrderFlowRun{}.Mixin()
+	cancelorderflowrun.Policy = privacy.NewPolicies(schema.CancelOrderFlowRun{})
+	cancelorderflowrun.Hooks[0] = func(next ent.Mutator) ent.Mutator {
+		return ent.MutateFunc(func(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+			if err := cancelorderflowrun.Policy.EvalMutation(ctx, m); err != nil {
+				return nil, err
+			}
+			return next.Mutate(ctx, m)
+		})
+	}
+	cancelorderflowrunMixinFields0 := cancelorderflowrunMixin[0].Fields()
+	_ = cancelorderflowrunMixinFields0
+	cancelorderflowrunFields := schema.CancelOrderFlowRun{}.Fields()
+	_ = cancelorderflowrunFields
+	// cancelorderflowrunDescAttempt is the schema descriptor for attempt field.
+	cancelorderflowrunDescAttempt := cancelorderflowrunMixinFields0[3].Descriptor()
+	// cancelorderflowrun.DefaultAttempt holds the default value on creation for the attempt field.
+	cancelorderflowrun.DefaultAttempt = cancelorderflowrunDescAttempt.Default.(int)
+	// cancelorderflowrunDescCreatedAt is the schema descriptor for created_at field.
+	cancelorderflowrunDescCreatedAt := cancelorderflowrunMixinFields0[9].Descriptor()
+	// cancelorderflowrun.DefaultCreatedAt holds the default value on creation for the created_at field.
+	cancelorderflowrun.DefaultCreatedAt = cancelorderflowrunDescCreatedAt.Default.(func() time.Time)
+	// cancelorderflowrunDescUpdatedAt is the schema descriptor for updated_at field.
+	cancelorderflowrunDescUpdatedAt := cancelorderflowrunMixinFields0[10].Descriptor()
+	// cancelorderflowrun.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	cancelorderflowrun.DefaultUpdatedAt = cancelorderflowrunDescUpdatedAt.Default.(func() time.Time)
+	// cancelorderflowrun.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	cancelorderflowrun.UpdateDefaultUpdatedAt = cancelorderflowrunDescUpdatedAt.UpdateDefault.(func() time.Time)
 	orderHooks := schema.Order{}.Hooks()
 	order.Hooks[0] = orderHooks[0]
 	orderFields := schema.Order{}.Fields()
 	_ = orderFields
+	// orderDescEffectCount is the schema descriptor for effect_count field.
+	orderDescEffectCount := orderFields[1].Descriptor()
+	// order.DefaultEffectCount holds the default value on creation for the effect_count field.
+	order.DefaultEffectCount = orderDescEffectCount.Default.(int)
 }
 
 const (

@@ -11,6 +11,35 @@ import (
 // working-but-wrong path with no idempotency key and no persistence.
 var ErrRequiresDurableRun = errors.New("entflow: flow requires a durable run (Activity/Emit steps are not executable in Phase 1)")
 
+// ErrUnknownFlow is returned when a caller (entflow.Start, the worker) names
+// a flow that has no RunStore registered on the Engine (D-24/D-25) — a
+// programming-time wiring mistake (a flow declared but never
+// Engine.Register'd), not a runtime data condition.
+var ErrUnknownFlow = errors.New("entflow: unknown flow")
+
+// ErrRunNotClaimable is returned when a run row loaded immediately after a
+// successful claim is found NOT to be in a claimable state (D-32) — a
+// defensive check against a ClaimStrategy/RunStore disagreeing about which
+// states are claimable, which would otherwise silently execute a step
+// against a terminal or already-claimed run.
+var ErrRunNotClaimable = errors.New("entflow: run not claimable")
+
+// ErrRunNotAdvanced is returned when a RunStore.Advance or RunStore.Fail
+// conditional update's guard (FromState/FromStep) does not match the row's
+// current values — the same run was concurrently advanced by another
+// transaction between this claim's load and its write, which the guard
+// exists to detect rather than silently overwrite (D-30).
+var ErrRunNotAdvanced = errors.New("entflow: run advance guard did not match")
+
+// ErrNoSelfLoader is returned by Self[T] when the current step's context
+// carries no live self value — a flow that calls Self without declaring
+// WithSelfLoader. Contrast Result[T]'s ErrUnknownStep (a step name never
+// recorded) and a SelfWas condition's silent false-evaluation: Self is the
+// one of the three seams that reports its own absence as an error a step
+// author sees directly, since there is no sensible default live entity to
+// hand back.
+var ErrNoSelfLoader = errors.New("entflow: flow declares no WithSelfLoader (see entflow.WithSelfLoader)")
+
 // StepError is the error every step failure surfaces as. It carries the
 // failing step's identity alongside the underlying cause, and unwraps to that
 // cause so errors.Is and errors.As reach through it — ent's own error types

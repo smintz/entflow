@@ -105,18 +105,34 @@ func (f *FlowOf[In]) Exec(ctx context.Context, tx any, in In) error {
 	ctx, rs := withResults(ctx)
 
 	for _, s := range order {
-		if !evalConditions(s.conditions, selfStatus) {
-			continue
-		}
-		result, err := runStep(ctx, s, tx, in)
+		result, ran, err := runOneStep(ctx, s, tx, in, selfStatus)
 		if err != nil {
 			return err
 		}
-		if s.constructor != "Check" {
-			putResult(rs, s.name, result)
+		if ran && s.constructor != "Check" {
+			if err := putResult(rs, s.name, result); err != nil {
+				return fmt.Errorf("entflow: flow %q: step %q: %w", f.name, s.name, err)
+			}
 		}
 	}
 	return nil
+}
+
+// runOneStep is the single per-step primitive Exec's all-steps loop and
+// Phase 2's ExecStep (runner.go) both call — there is exactly one place
+// where a step's conditions are evaluated and its closure is invoked through
+// runStep's recover boundary. A false condition reports ran=false with a nil
+// result and a nil error, matching the "skip, record nothing" behavior
+// Exec's loop and the durable executor must share bit-for-bit.
+func runOneStep(ctx context.Context, s *step, tx, in any, selfStatus string) (result any, ran bool, err error) {
+	if !evalConditions(s.conditions, selfStatus) {
+		return nil, false, nil
+	}
+	v, err := runStep(ctx, s, tx, in)
+	if err != nil {
+		return nil, true, err
+	}
+	return v, true, nil
 }
 
 // needsSelfStatus reports whether any step in steps declares a SelfWas

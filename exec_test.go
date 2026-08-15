@@ -71,10 +71,21 @@ func TestRequiresDurableRunCancelOrderFlow(t *testing.T) {
 	seeded, err := client.Order.Create().SetStatus(order.StatusPaid).Save(ctx)
 	require.NoError(t, err)
 
+	// Order{}.Flows() declares two flows since plan 02-08 (CancelOrder and
+	// the ProcessOrder crash-simulation fixture, sharing
+	// CancelOrderFlowRun's table) — select CancelOrder by name rather than
+	// assuming a single-element slice.
 	flows := entflow.FlowsOf(schema.Order{})
-	require.Len(t, flows, 1)
-	flow, ok := flows[0].(*entflow.FlowOf[*schema.CancelOrderRequest])
-	require.True(t, ok, "expected *entflow.FlowOf[*schema.CancelOrderRequest], got %T", flows[0])
+	require.GreaterOrEqual(t, len(flows), 1)
+	var cancelOrderFlow entflow.Flow
+	for _, f := range flows {
+		if f.Name() == "CancelOrder" {
+			cancelOrderFlow = f
+		}
+	}
+	require.NotNil(t, cancelOrderFlow, "schema.Order{}.Flows() does not declare a CancelOrder flow")
+	flow, ok := cancelOrderFlow.(*entflow.FlowOf[*schema.CancelOrderRequest])
+	require.True(t, ok, "expected *entflow.FlowOf[*schema.CancelOrderRequest], got %T", cancelOrderFlow)
 
 	tx, err := client.Tx(ctx)
 	require.NoError(t, err)

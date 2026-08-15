@@ -7,6 +7,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 )
 
 const (
@@ -16,16 +17,28 @@ const (
 	FieldID = "id"
 	// FieldPaymentIntentID holds the string denoting the payment_intent_id field in the database.
 	FieldPaymentIntentID = "payment_intent_id"
+	// FieldEffectCount holds the string denoting the effect_count field in the database.
+	FieldEffectCount = "effect_count"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
+	// EdgeRuns holds the string denoting the runs edge name in mutations.
+	EdgeRuns = "runs"
 	// Table holds the table name of the order in the database.
 	Table = "orders"
+	// RunsTable is the table that holds the runs relation/edge.
+	RunsTable = "cancel_order_flow_runs"
+	// RunsInverseTable is the table name for the CancelOrderFlowRun entity.
+	// It exists in this package in order to avoid circular dependency with the "cancelorderflowrun" package.
+	RunsInverseTable = "cancel_order_flow_runs"
+	// RunsColumn is the table column denoting the runs relation/edge.
+	RunsColumn = "cancel_order_flow_run_owner"
 )
 
 // Columns holds all SQL columns for order fields.
 var Columns = []string{
 	FieldID,
 	FieldPaymentIntentID,
+	FieldEffectCount,
 	FieldStatus,
 }
 
@@ -46,6 +59,8 @@ func ValidColumn(column string) bool {
 //	import _ "github.com/smintz/entflow/internal/testdata/ent/runtime"
 var (
 	Hooks [1]ent.Hook
+	// DefaultEffectCount holds the default value on creation for the "effect_count" field.
+	DefaultEffectCount int
 )
 
 // Status defines the type for the "status" enum field.
@@ -91,7 +106,33 @@ func ByPaymentIntentID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPaymentIntentID, opts...).ToFunc()
 }
 
+// ByEffectCount orders the results by the effect_count field.
+func ByEffectCount(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEffectCount, opts...).ToFunc()
+}
+
 // ByStatus orders the results by the status field.
 func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
+}
+
+// ByRunsCount orders the results by runs count.
+func ByRunsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newRunsStep(), opts...)
+	}
+}
+
+// ByRuns orders the results by runs terms.
+func ByRuns(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newRunsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newRunsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(RunsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, RunsTable, RunsColumn),
+	)
 }

@@ -9,6 +9,7 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/smintz/entflow/internal/testdata/ent/cancelorderflowrun"
 	"github.com/smintz/entflow/internal/testdata/ent/order"
 )
 
@@ -33,6 +34,20 @@ func (_c *OrderCreate) SetNillablePaymentIntentID(v *string) *OrderCreate {
 	return _c
 }
 
+// SetEffectCount sets the "effect_count" field.
+func (_c *OrderCreate) SetEffectCount(v int) *OrderCreate {
+	_c.mutation.SetEffectCount(v)
+	return _c
+}
+
+// SetNillableEffectCount sets the "effect_count" field if the given value is not nil.
+func (_c *OrderCreate) SetNillableEffectCount(v *int) *OrderCreate {
+	if v != nil {
+		_c.SetEffectCount(*v)
+	}
+	return _c
+}
+
 // SetStatus sets the "status" field.
 func (_c *OrderCreate) SetStatus(v order.Status) *OrderCreate {
 	_c.mutation.SetStatus(v)
@@ -45,6 +60,21 @@ func (_c *OrderCreate) SetNillableStatus(v *order.Status) *OrderCreate {
 		_c.SetStatus(*v)
 	}
 	return _c
+}
+
+// AddRunIDs adds the "runs" edge to the CancelOrderFlowRun entity by IDs.
+func (_c *OrderCreate) AddRunIDs(ids ...int) *OrderCreate {
+	_c.mutation.AddRunIDs(ids...)
+	return _c
+}
+
+// AddRuns adds the "runs" edges to the CancelOrderFlowRun entity.
+func (_c *OrderCreate) AddRuns(v ...*CancelOrderFlowRun) *OrderCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddRunIDs(ids...)
 }
 
 // Mutation returns the OrderMutation object of the builder.
@@ -84,6 +114,10 @@ func (_c *OrderCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *OrderCreate) defaults() error {
+	if _, ok := _c.mutation.EffectCount(); !ok {
+		v := order.DefaultEffectCount
+		_c.mutation.SetEffectCount(v)
+	}
 	if _, ok := _c.mutation.Status(); !ok {
 		v := order.DefaultStatus
 		_c.mutation.SetStatus(v)
@@ -93,6 +127,9 @@ func (_c *OrderCreate) defaults() error {
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *OrderCreate) check() error {
+	if _, ok := _c.mutation.EffectCount(); !ok {
+		return &ValidationError{Name: "effect_count", err: errors.New(`ent: missing required field "Order.effect_count"`)}
+	}
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "Order.status"`)}
 	}
@@ -131,9 +168,29 @@ func (_c *OrderCreate) createSpec() (*Order, *sqlgraph.CreateSpec) {
 		_spec.SetField(order.FieldPaymentIntentID, field.TypeString, value)
 		_node.PaymentIntentID = value
 	}
+	if value, ok := _c.mutation.EffectCount(); ok {
+		_spec.SetField(order.FieldEffectCount, field.TypeInt, value)
+		_node.EffectCount = value
+	}
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(order.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
+	}
+	if nodes := _c.mutation.RunsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   order.RunsTable,
+			Columns: []string{order.RunsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(cancelorderflowrun.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

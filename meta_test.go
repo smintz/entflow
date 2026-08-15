@@ -17,11 +17,22 @@ import (
 // FlowsOf(schema.Order{}) path every other test in this package uses. Other
 // test files in this package (describe_test.go, callshapes_test.go) reuse
 // this helper.
+//
+// Since plan 02-08, Order{}.Flows() returns two flows — CancelOrder and the
+// multi-step ProcessOrder crash-simulation fixture — sharing
+// CancelOrderFlowRun's table (order_flows.go), so this helper selects
+// CancelOrder by name rather than assuming a single-element slice.
 func cancelOrderFlow(t *testing.T) entflow.Flow {
 	t.Helper()
 	flows := entflow.FlowsOf(schema.Order{})
-	require.Len(t, flows, 1)
-	return flows[0]
+	require.GreaterOrEqual(t, len(flows), 1)
+	for _, f := range flows {
+		if f.Name() == "CancelOrder" {
+			return f
+		}
+	}
+	t.Fatalf("schema.Order{}.Flows() does not declare a %q flow", "CancelOrder")
+	return nil
 }
 
 // TestFlowMetaCoversDeclaredSteps proves Meta() reports the fixture's flow

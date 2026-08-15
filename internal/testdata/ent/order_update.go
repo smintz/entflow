@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/smintz/entflow/internal/testdata/ent/cancelorderflowrun"
 	"github.com/smintz/entflow/internal/testdata/ent/order"
 	"github.com/smintz/entflow/internal/testdata/ent/predicate"
 )
@@ -47,6 +48,27 @@ func (_u *OrderUpdate) ClearPaymentIntentID() *OrderUpdate {
 	return _u
 }
 
+// SetEffectCount sets the "effect_count" field.
+func (_u *OrderUpdate) SetEffectCount(v int) *OrderUpdate {
+	_u.mutation.ResetEffectCount()
+	_u.mutation.SetEffectCount(v)
+	return _u
+}
+
+// SetNillableEffectCount sets the "effect_count" field if the given value is not nil.
+func (_u *OrderUpdate) SetNillableEffectCount(v *int) *OrderUpdate {
+	if v != nil {
+		_u.SetEffectCount(*v)
+	}
+	return _u
+}
+
+// AddEffectCount adds value to the "effect_count" field.
+func (_u *OrderUpdate) AddEffectCount(v int) *OrderUpdate {
+	_u.mutation.AddEffectCount(v)
+	return _u
+}
+
 // SetStatus sets the "status" field.
 func (_u *OrderUpdate) SetStatus(v order.Status) *OrderUpdate {
 	_u.mutation.SetStatus(v)
@@ -61,9 +83,45 @@ func (_u *OrderUpdate) SetNillableStatus(v *order.Status) *OrderUpdate {
 	return _u
 }
 
+// AddRunIDs adds the "runs" edge to the CancelOrderFlowRun entity by IDs.
+func (_u *OrderUpdate) AddRunIDs(ids ...int) *OrderUpdate {
+	_u.mutation.AddRunIDs(ids...)
+	return _u
+}
+
+// AddRuns adds the "runs" edges to the CancelOrderFlowRun entity.
+func (_u *OrderUpdate) AddRuns(v ...*CancelOrderFlowRun) *OrderUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddRunIDs(ids...)
+}
+
 // Mutation returns the OrderMutation object of the builder.
 func (_u *OrderUpdate) Mutation() *OrderMutation {
 	return _u.mutation
+}
+
+// ClearRuns clears all "runs" edges to the CancelOrderFlowRun entity.
+func (_u *OrderUpdate) ClearRuns() *OrderUpdate {
+	_u.mutation.ClearRuns()
+	return _u
+}
+
+// RemoveRunIDs removes the "runs" edge to CancelOrderFlowRun entities by IDs.
+func (_u *OrderUpdate) RemoveRunIDs(ids ...int) *OrderUpdate {
+	_u.mutation.RemoveRunIDs(ids...)
+	return _u
+}
+
+// RemoveRuns removes "runs" edges to CancelOrderFlowRun entities.
+func (_u *OrderUpdate) RemoveRuns(v ...*CancelOrderFlowRun) *OrderUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveRunIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -121,8 +179,59 @@ func (_u *OrderUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.PaymentIntentIDCleared() {
 		_spec.ClearField(order.FieldPaymentIntentID, field.TypeString)
 	}
+	if value, ok := _u.mutation.EffectCount(); ok {
+		_spec.SetField(order.FieldEffectCount, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedEffectCount(); ok {
+		_spec.AddField(order.FieldEffectCount, field.TypeInt, value)
+	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(order.FieldStatus, field.TypeEnum, value)
+	}
+	if _u.mutation.RunsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   order.RunsTable,
+			Columns: []string{order.RunsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(cancelorderflowrun.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedRunsIDs(); len(nodes) > 0 && !_u.mutation.RunsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   order.RunsTable,
+			Columns: []string{order.RunsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(cancelorderflowrun.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RunsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   order.RunsTable,
+			Columns: []string{order.RunsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(cancelorderflowrun.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -164,6 +273,27 @@ func (_u *OrderUpdateOne) ClearPaymentIntentID() *OrderUpdateOne {
 	return _u
 }
 
+// SetEffectCount sets the "effect_count" field.
+func (_u *OrderUpdateOne) SetEffectCount(v int) *OrderUpdateOne {
+	_u.mutation.ResetEffectCount()
+	_u.mutation.SetEffectCount(v)
+	return _u
+}
+
+// SetNillableEffectCount sets the "effect_count" field if the given value is not nil.
+func (_u *OrderUpdateOne) SetNillableEffectCount(v *int) *OrderUpdateOne {
+	if v != nil {
+		_u.SetEffectCount(*v)
+	}
+	return _u
+}
+
+// AddEffectCount adds value to the "effect_count" field.
+func (_u *OrderUpdateOne) AddEffectCount(v int) *OrderUpdateOne {
+	_u.mutation.AddEffectCount(v)
+	return _u
+}
+
 // SetStatus sets the "status" field.
 func (_u *OrderUpdateOne) SetStatus(v order.Status) *OrderUpdateOne {
 	_u.mutation.SetStatus(v)
@@ -178,9 +308,45 @@ func (_u *OrderUpdateOne) SetNillableStatus(v *order.Status) *OrderUpdateOne {
 	return _u
 }
 
+// AddRunIDs adds the "runs" edge to the CancelOrderFlowRun entity by IDs.
+func (_u *OrderUpdateOne) AddRunIDs(ids ...int) *OrderUpdateOne {
+	_u.mutation.AddRunIDs(ids...)
+	return _u
+}
+
+// AddRuns adds the "runs" edges to the CancelOrderFlowRun entity.
+func (_u *OrderUpdateOne) AddRuns(v ...*CancelOrderFlowRun) *OrderUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddRunIDs(ids...)
+}
+
 // Mutation returns the OrderMutation object of the builder.
 func (_u *OrderUpdateOne) Mutation() *OrderMutation {
 	return _u.mutation
+}
+
+// ClearRuns clears all "runs" edges to the CancelOrderFlowRun entity.
+func (_u *OrderUpdateOne) ClearRuns() *OrderUpdateOne {
+	_u.mutation.ClearRuns()
+	return _u
+}
+
+// RemoveRunIDs removes the "runs" edge to CancelOrderFlowRun entities by IDs.
+func (_u *OrderUpdateOne) RemoveRunIDs(ids ...int) *OrderUpdateOne {
+	_u.mutation.RemoveRunIDs(ids...)
+	return _u
+}
+
+// RemoveRuns removes "runs" edges to CancelOrderFlowRun entities.
+func (_u *OrderUpdateOne) RemoveRuns(v ...*CancelOrderFlowRun) *OrderUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveRunIDs(ids...)
 }
 
 // Where appends a list predicates to the OrderUpdate builder.
@@ -268,8 +434,59 @@ func (_u *OrderUpdateOne) sqlSave(ctx context.Context) (_node *Order, err error)
 	if _u.mutation.PaymentIntentIDCleared() {
 		_spec.ClearField(order.FieldPaymentIntentID, field.TypeString)
 	}
+	if value, ok := _u.mutation.EffectCount(); ok {
+		_spec.SetField(order.FieldEffectCount, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedEffectCount(); ok {
+		_spec.AddField(order.FieldEffectCount, field.TypeInt, value)
+	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(order.FieldStatus, field.TypeEnum, value)
+	}
+	if _u.mutation.RunsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   order.RunsTable,
+			Columns: []string{order.RunsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(cancelorderflowrun.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedRunsIDs(); len(nodes) > 0 && !_u.mutation.RunsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   order.RunsTable,
+			Columns: []string{order.RunsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(cancelorderflowrun.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RunsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   order.RunsTable,
+			Columns: []string{order.RunsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(cancelorderflowrun.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Order{config: _u.config}
 	_spec.Assign = _node.assignValues
