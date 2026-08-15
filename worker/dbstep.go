@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/smintz/entflow"
 )
@@ -23,7 +24,7 @@ var claimStates = []string{entflow.RunStatePending, entflow.RunStateRunning}
 //
 // claimed is false with a nil error when nothing was claimable — not an
 // error condition.
-func claimOnce(ctx context.Context, store entflow.RunStore, runner entflow.Runner, strategy ClaimStrategy) (claimed bool, err error) {
+func claimOnce(ctx context.Context, store entflow.RunStore, runner entflow.Runner, strategy ClaimStrategy, opts Options) (claimed bool, err error) {
 	txAny, err := store.BeginTx(ctx)
 	if err != nil {
 		return false, fmt.Errorf("entflow/worker: opening claim transaction: %w", err)
@@ -129,6 +130,8 @@ func claimOnce(ctx context.Context, store entflow.RunStore, runner entflow.Runne
 	}
 
 	ranStep := ""
+	failingStep := ""
+	var stepErr error
 	for i := nextIdx; i < len(stepOrder); i++ {
 		name := stepOrder[i]
 		outcome, execErr := runner.ExecStep(ctx, txAny, entflow.StepCall{
@@ -139,7 +142,9 @@ func claimOnce(ctx context.Context, store entflow.RunStore, runner entflow.Runne
 			Self:    self,
 		})
 		if execErr != nil {
-			return false, fmt.Errorf("entflow/worker: executing step %q: %w", name, execErr)
+			failingStep = name
+			stepErr = execErr
+			break
 		}
 		if !outcome.Ran {
 			continue
@@ -152,6 +157,22 @@ func claimOnce(ctx context.Context, store entflow.RunStore, runner entflow.Runne
 			adv.Results[name] = outcome.Result
 		}
 		break
+	}
+
+	// DUR-07: make "after retries exhaust" literally true. A retryable
+	// driver error (D-51) schedules a retry by incrementing attempt and
+	// setting retry_after, leaving state running and current_step
+	// unchanged, so the same step is retried on a later claim — until the
+	// attempt ceiling is reached, at which point (or immediately, for a
+	// non-retryable error, which never burns the counter) the run fails to
+	// failed:<step> with the error recorded. Both writes go through
+	// RunStore.Fail, guarded exactly like Advance: a guard miss means
+	// another transaction already touched this run (most importantly,
+	// cancelled it, D-43) between this claim's load and this write, and
+	// must be handled — not ignored — by abandoning the claim rather than
+	// resurrecting a run that is no longer ours.
+	if stepErr != nil {
+		return failStep(ctx, store, txAny, tx, id, run, failingStep, stepErr, opts, &committed)
 	}
 
 	if ranStep != "" {
@@ -181,5 +202,64 @@ func claimOnce(ctx context.Context, store entflow.RunStore, runner entflow.Runne
 		return false, fmt.Errorf("entflow/worker: committing claim transaction: %w", err)
 	}
 	committed = true
+	return true, nil
+}
+
+// failStep is claimOnce's DUR-07 terminal-states/retry branch, split out
+// only for readability — it shares claimOnce's transaction (txAny/tx) and
+// its committed flag (via pointer, so the shared defer in claimOnce still
+// rolls back exactly once on any early return).
+//
+// classifyRetryable (retry.go) decides retryable vs. not. A retryable error
+// below the attempt ceiling (DefaultMaxAttempts) schedules a retry: attempt
+// increments, retry_after is set from the database-independent process
+// clock via nextRetryAfter's exponential-with-jitter schedule, state stays
+// running, and current_step is left untouched by RunStore.Fail (it has no
+// CurrentStep field to set) — so the SAME step is retried on a later claim.
+// Everything else — a retryable error at the ceiling, or any non-retryable
+// error — fails the run to failed:<failingStep> immediately, recording
+// stepErr's rendered message (StepError.Error(), which names the step and
+// kind and never embeds the run's input bytes, T-02-03) in last_error. A
+// non-retryable error never increments attempt at all — retrying a
+// business-logic error would just burn the ceiling for no reason.
+func failStep(ctx context.Context, store entflow.RunStore, txAny any, tx entflow.Tx, id any, run *entflow.Run, failingStep string, stepErr error, opts Options, committed *bool) (bool, error) {
+	f := entflow.Fail{
+		FromState: run.State,
+		FromStep:  run.CurrentStep,
+	}
+
+	retryable := classifyRetryable(stepErr, opts)
+	newAttempt := run.Attempt
+	if retryable {
+		newAttempt = run.Attempt + 1
+	}
+
+	if retryable && newAttempt < DefaultMaxAttempts {
+		retryAt := nextRetryAfter(time.Now(), newAttempt)
+		f.ToState = entflow.RunStateRunning
+		f.Attempt = newAttempt
+		f.RetryAfter = &retryAt
+	} else {
+		f.ToState = entflow.RunStateFailed(failingStep)
+		f.Attempt = newAttempt
+		f.LastError = stepErr.Error()
+	}
+
+	failed, ferr := store.Fail(ctx, txAny, id, f)
+	if ferr != nil {
+		return false, fmt.Errorf("entflow/worker: failing run %v: %w", id, ferr)
+	}
+	if !failed {
+		// The guard (FromState/FromStep) did not match — another
+		// transaction already touched this run (e.g. cancelled it, D-43)
+		// since this claim's load. Report it and let the caller's deferred
+		// rollback abandon the claim; never overwrite.
+		return false, fmt.Errorf("entflow/worker: failing run %v: %w", id, entflow.ErrRunNotAdvanced)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return false, fmt.Errorf("entflow/worker: committing claim transaction: %w", err)
+	}
+	*committed = true
 	return true, nil
 }

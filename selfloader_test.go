@@ -2,6 +2,7 @@ package entflow_test
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -50,14 +51,21 @@ func newSelfLoaderMultiStepFlow() *entflow.FlowOf[*selfLoaderInput] {
 }
 
 // newNoSelfLoaderFlow declares no WithSelfLoader at all — its one step calls
-// Self[T] anyway, to prove the resulting error rather than a panic.
+// Self[T] anyway, to prove the resulting error rather than a panic. Its step
+// is deliberately named "cancel", not "observe": since plan 02-04 (Task 3),
+// a step closure's error fails the run to a failed:<step> state, and this
+// flow shares the CancelOrderFlowRun table (entflowfixture.New) with the
+// real CancelOrder flow — whose RunMixin-derived `state` enum only contains
+// failed:<step> values for CancelOrder's OWN declared step names (cancel,
+// refund, order.cancelled). "cancel" is the one name every fixture flow
+// sharing this table can safely fail under.
 func newNoSelfLoaderFlow() *entflow.FlowOf[*selfLoaderInput] {
 	f := entflow.New[*selfLoaderInput]("NoSelfLoader",
 		entflow.WithOwnerRef(func(in *selfLoaderInput) (int, error) {
 			return in.OrderID, nil
 		}),
 	)
-	entflow.Step(f, "observe", func(ctx context.Context, tx *ent.Tx, in *selfLoaderInput) (*ent.Order, error) {
+	entflow.Step(f, "cancel", func(ctx context.Context, tx *ent.Tx, in *selfLoaderInput) (*ent.Order, error) {
 		if _, err := entflow.Self[*ent.Order](ctx); err != nil {
 			return nil, err
 		}
@@ -140,28 +148,29 @@ func TestSelfIsLiveAcrossClaims(t *testing.T) {
 		"step two's Self[*ent.Order] must observe step one's mutation, committed in an earlier claim")
 }
 
-// TestSelfNoLoaderReturnsErrNoSelfLoader proves a flow that calls Self[T]
-// without declaring WithSelfLoader gets ErrNoSelfLoader, not a panic.
+// TestSelfNoLoaderReturnsErrNoSelfLoader proves Self[T] on a context that
+// was never given a self value — the case for a flow that declares no
+// WithSelfLoader at all — returns ErrNoSelfLoader rather than panicking.
 func TestSelfNoLoaderReturnsErrNoSelfLoader(t *testing.T) {
-	ctx := context.Background()
-	client := entclient.New(t)
-	store := entflowfixture.New(client)
-	eng := entflow.NewEngine()
+	_, err := entflow.Self[*ent.Order](context.Background())
+	require.ErrorIs(t, err, entflow.ErrNoSelfLoader)
+}
 
+// TestFlowLoadSelfWithoutDeclaredLoaderReturnsErrNoSelfLoader proves the
+// same guarantee one layer down, at the Runner.LoadSelf seam worker/
+// dbstep.go calls: a flow with no declared WithSelfLoader reports
+// ErrNoSelfLoader from LoadSelf itself, which worker/dbstep.go treats as
+// "Self[T] unavailable this claim" rather than a claim failure (see
+// worker/retry_test.go for the DUR-07-era proof that a step's OWN call to
+// Self[T] failing that way now fails the RUN, not the worker's Go error
+// return — a step failure is a domain outcome recorded on the run row,
+// exactly like a successful advance).
+func TestFlowLoadSelfWithoutDeclaredLoaderReturnsErrNoSelfLoader(t *testing.T) {
 	f := newNoSelfLoaderFlow()
-	require.NoError(t, eng.Register(f, store))
-
-	owner, err := client.Order.Create().SetStatus(order.StatusDraft).Save(ctx)
+	input, err := json.Marshal(&selfLoaderInput{OrderID: 1})
 	require.NoError(t, err)
 
-	_, err = entflow.Start(ctx, eng, f, &selfLoaderInput{OrderID: owner.ID})
-	require.NoError(t, err)
-
-	w := newSelfLoaderWorker(t, eng)
-
-	claimed, err := w.ClaimOnce(ctx)
-	require.False(t, claimed)
-	require.Error(t, err)
+	_, err = f.LoadSelf(context.Background(), nil, input)
 	require.ErrorIs(t, err, entflow.ErrNoSelfLoader)
 }
 

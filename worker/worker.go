@@ -91,7 +91,7 @@ func (w *Worker) ClaimOnce(ctx context.Context) (claimed bool, err error) {
 		if !ok {
 			continue
 		}
-		claimedThis, claimErr := claimOnce(ctx, store, runner, w.strategy)
+		claimedThis, claimErr := claimOnce(ctx, store, runner, w.strategy, w.opts)
 		if claimErr != nil {
 			return false, claimErr
 		}
