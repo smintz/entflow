@@ -110,7 +110,9 @@ func (f *FlowOf[In]) Exec(ctx context.Context, tx any, in In) error {
 			return err
 		}
 		if ran && s.constructor != "Check" {
-			putResult(rs, s.name, result)
+			if err := putResult(rs, s.name, result); err != nil {
+				return fmt.Errorf("entflow: flow %q: step %q: %w", f.name, s.name, err)
+			}
 		}
 	}
 	return nil

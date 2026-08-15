@@ -198,11 +198,10 @@ func (f *FlowOf[In]) ExecStep(ctx context.Context, tx any, c StepCall) (StepOutc
 	// Hydrate a fresh per-call result store from the persisted, JSON-shaped
 	// results (D-40) — never from a live in-memory value, so a step calling
 	// Result[T] for a prior step behaves identically whether or not the run
-	// crashed between claims.
-	ctx, rs := withResults(ctx)
-	for name, raw := range c.Results {
-		putResult(rs, name, raw)
-	}
+	// crashed between claims. The stored bytes are used as-is, with no
+	// re-marshal: they are already exactly what a previous claim's
+	// putResult produced.
+	ctx = withResultsFrom(ctx, c.Results)
 
 	result, ran, err := runOneStep(ctx, target, tx, in, c.SelfWas)
 	if err != nil {
