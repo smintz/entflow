@@ -190,3 +190,7 @@ None - no external service configuration required.
 ---
 *Phase: 02-durability*
 *Completed: 2026-08-15*
+
+## Self-Check: PASSED
+
+All created files verified present on disk (run.go, ownerref.go, run_test.go, execquery_test.go, cancelorderflowrun_test.go, internal/testdata/ent/schema/cancelorderflowrun.go, internal/testdata/ent/generate.go). All referenced commit hashes (64fba27, cbf85a1) verified present in `git log --oneline --all`.
